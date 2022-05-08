@@ -32,23 +32,23 @@ def main():
     while True:
         raw_data, addr = conn.recvfrom(65536)
         dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
-        # print('\nEthernet Frame:')
-        # print(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
+        print('\nEthernet Frame:')
+        print(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
 
         # 8 for IVp4
         if eth_proto == 8:
             (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
-        #     print(TAB_1 + 'IPv4 Packet:')
-        #     print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
-        #     print(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
+            print(TAB_1 + 'IPv4 Packet:')
+            print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
+            print(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
 
             # ICMP
-            # if proto == 1:
-            #     icmp_type, code, checksum, data = icmp_packet(data)
-            #     print(TAB_1 + 'ICMP Packet:')
-            #     print(TAB_2 + 'Type: {}, Code: {}, Checksum: {}'.format(icmp_type, code, checksum))
-            #     print(TAB_2 + 'Data:')
-            #     print(format_multi_line(DATA_TAB_3, data))
+            if proto == 1:
+                icmp_type, code, checksum, data = icmp_packet(data)
+                print(TAB_1 + 'ICMP Packet:')
+                print(TAB_2 + 'Type: {}, Code: {}, Checksum: {}'.format(icmp_type, code, checksum))
+                print(TAB_2 + 'Data:')
+                print(format_multi_line(DATA_TAB_3, data))
 
             # TCP
             if proto == 6:
@@ -58,13 +58,13 @@ def main():
                     print('PEER-TO-PEER!!!')
                 print(TAB_1 + 'TCP Segment:')
                 print(TAB_2 + 'Source Port: {}, Destination Port: {}'.format(src_port, dest_port))
-                # print(TAB_2 + 'Sequence: {}, Acknowledgment: {}'.format(sequence, ack))
-                # print(TAB_2 + 'Flags:')
-                # print(TAB_3 + 'URG: {}, ACK: {}, PSH: {}, '
-                #               'RST:{}, SYN: {}, FIN:{}'.format(flag_urg, flag_ack, flag_psh,
-                #                                                flag_rst, flag_syn, flag_fin))
-                # print(TAB_2 + 'Data:')
-                # print(format_multi_line(DATA_TAB_3, data))
+                print(TAB_2 + 'Sequence: {}, Acknowledgment: {}'.format(sequence, ack))
+                print(TAB_2 + 'Flags:')
+                print(TAB_3 + 'URG: {}, ACK: {}, PSH: {}, '
+                              'RST:{}, SYN: {}, FIN:{}'.format(flag_urg, flag_ack, flag_psh,
+                                                               flag_rst, flag_syn, flag_fin))
+                print(TAB_2 + 'Data:')
+                print(format_multi_line(DATA_TAB_3, data))
 
             # UDP
             elif proto == 17:
@@ -75,13 +75,13 @@ def main():
                 print(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
 
             # Other
-            # else:
-                # print(TAB_1 + 'Data:')
-                # print(format_multi_line(DATA_TAB_2, data))
+            else:
+                print(TAB_1 + 'Data:')
+                print(format_multi_line(DATA_TAB_2, data))
 
-        # else:
-        #     print('Data:')
-        #     print(format_multi_line(DATA_TAB_1, data))
+        else:
+            print('Data:')
+            print(format_multi_line(DATA_TAB_1, data))
 
 
 # Unpack Ethernet frame
