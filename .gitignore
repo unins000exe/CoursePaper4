@@ -1,0 +1,14 @@
+*.log
+*.toc
+*.bbl
+*.blg
+*.aux
+*.fls
+*.out
+*.synctex.gz
+*.fdb_latexmk
+СMakeLists.txt
+**/.idea
+**/cmake-build-debug
+**/CMakeLists.txt
+*.iml
