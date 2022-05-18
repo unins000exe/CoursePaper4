@@ -14,3 +14,5 @@
 *.iml
 **/__pycache__
 **/.vscode
+*.pygstyle
+*.pygtex
