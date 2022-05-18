@@ -12,5 +12,5 @@
 **/cmake-build-debug
 **/CMakeLists.txt
 *.iml
-/__pycache__
+**/__pycache__
 **/.vscode
