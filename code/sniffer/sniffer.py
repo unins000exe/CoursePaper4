@@ -25,63 +25,79 @@ LIST_p2p = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 6884: 'B
             4379: 'Steam (voice chat)', 4380: 'Steam (voice chat)', 4899: 'Radmin VPN', 12975: 'Hamachi',
             32976: 'Hamachi', 3479: 'Skype', 3480: 'Skype', 3481: 'Skype'}
 
+UDP_packets = {}
 
-def main():
-    conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
 
-    while True:
-        raw_data, addr = conn.recvfrom(65536)
-        dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
-        # print('\nEthernet Frame:')
-        # print(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
+def main(conn):
+    output = []
 
-        # 8 for IVp4
-        if eth_proto == 8:
-            (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
-        #     print(TAB_1 + 'IPv4 Packet:')
-        #     print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
-        #     print(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
+    raw_data, addr = conn.recvfrom(65536)
+    dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
+    # '\nEthernet...'
+    output.append('Ethernet Frame:')
+    output.append(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
+    # print('\nEthernet Frame:')
+    # print(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
 
-            # ICMP
-            # if proto == 1:
-            #     icmp_type, code, checksum, data = icmp_packet(data)
-            #     print(TAB_1 + 'ICMP Packet:')
-            #     print(TAB_2 + 'Type: {}, Code: {}, Checksum: {}'.format(icmp_type, code, checksum))
-            #     print(TAB_2 + 'Data:')
-            #     print(format_multi_line(DATA_TAB_3, data))
 
-            # TCP
-            if proto == 6:
-                src_port, dest_port, sequence, ack, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(
-                    data)
-                if LIST_p2p.get(src_port, False) or LIST_p2p.get(dest_port, False):
-                    print('PEER-TO-PEER!!!')
-                print(TAB_1 + 'TCP Segment:')
-                print(TAB_2 + 'Source Port: {}, Destination Port: {}'.format(src_port, dest_port))
-                # print(TAB_2 + 'Sequence: {}, Acknowledgment: {}'.format(sequence, ack))
-                # print(TAB_2 + 'Flags:')
-                # print(TAB_3 + 'URG: {}, ACK: {}, PSH: {}, '
-                #               'RST:{}, SYN: {}, FIN:{}'.format(flag_urg, flag_ack, flag_psh,
-                #                                                flag_rst, flag_syn, flag_fin))
-                # print(TAB_2 + 'Data:')
-                # print(format_multi_line(DATA_TAB_3, data))
+    # 8 for IVp4
+    if eth_proto == 8:
+        (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
+        output.append(TAB_1 + 'IPv4 Packet:')
+        output.append(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
+        output.append(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
+        # print(TAB_1 + 'IPv4 Packet:')
+        # print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
+        # print(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
 
-            # UDP
-            elif proto == 17:
-                src_port, dest_port, length, data = udp_segment(data)
-                if LIST_p2p.get(src_port, False) or LIST_p2p.get(dest_port, False):
-                    print('PEER-TO-PEER!!!')
-                print(TAB_1 + 'UDP Segment:')
-                print(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
+        # ICMP
+        # if proto == 1:
+        #     icmp_type, code, checksum, data = icmp_packet(data)
+        #     print(TAB_1 + 'ICMP Packet:')
+        #     print(TAB_2 + 'Type: {}, Code: {}, Checksum: {}'.format(icmp_type, code, checksum))
+        #     print(TAB_2 + 'Data:')
+        #     print(format_multi_line(DATA_TAB_3, data))
 
-            # Other
-            # else:
-                # print(TAB_1 + 'Data:')
-                # print(format_multi_line(DATA_TAB_2, data))
+        # TCP
+        if proto == 6:
+            src_port, dest_port, sequence, ack, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(
+                data)
+            if LIST_p2p.get(src_port, False) or LIST_p2p.get(dest_port, False):
+                output.insert(0, "-----------------------------------Peer-To-Peer-----------------------------------")
+            output.append(TAB_1 + 'TCP Segment:')
+            output.append(TAB_2 + 'Source Port: {}, Destination Port: {}'.format(src_port, dest_port))
+            output.append(TAB_2 + 'Data Size: {}'.format(len(data)))
+            # print(TAB_1 + 'TCP Segment:')
+            # print(TAB_2 + 'Source Port: {}, Destination Port: {}'.format(src_port, dest_port))
+            # print(TAB_2 + 'Sequence: {}, Acknowledgment: {}'.format(sequence, ack))
+            # print(TAB_2 + 'Flags:')
+            # print(TAB_3 + 'URG: {}, ACK: {}, PSH: {}, '
+            #               'RST:{}, SYN: {}, FIN:{}'.format(flag_urg, flag_ack, flag_psh,
+            #                                                flag_rst, flag_syn, flag_fin))
+            # print(TAB_2 + 'Data:')
+            # print(format_multi_line(DATA_TAB_3, data))
 
-        # else:
-        #     print('Data:')
-        #     print(format_multi_line(DATA_TAB_1, data))
+        # UDP
+        elif proto == 17:
+            src_port, dest_port, length, data = udp_segment(data)
+            if LIST_p2p.get(src_port, False) or LIST_p2p.get(dest_port, False):
+                output.insert(0, "-----------------------------------Peer-To-Peer-----------------------------------")
+
+            output.append(TAB_1 + 'UDP Segment:')
+            output.append(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
+            # print(TAB_1 + 'UDP Segment:')
+            # print(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
+            output.append(TAB_2 + 'Data Size: {}'.format(len(data)))
+
+        # Other
+    #     else:
+    #         print(TAB_1 + 'Data:')
+    #         print(format_multi_line(DATA_TAB_2, data))
+    #
+    # else:
+    #     print('Data:')
+    #     print(format_multi_line(DATA_TAB_1, data))
+    return output
 
 
 # Unpack Ethernet frame
@@ -145,4 +161,5 @@ def format_multi_line(prefix, string, size=80):
     return '\n'.join([prefix + line for line in textwrap.wrap(string, size)])
 
 
-main()
+# def sniff():
+#     return main(conn)
