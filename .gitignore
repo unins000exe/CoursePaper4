@@ -13,3 +13,4 @@
 **/CMakeLists.txt
 *.iml
 /__pycache__
+**/.vscode
