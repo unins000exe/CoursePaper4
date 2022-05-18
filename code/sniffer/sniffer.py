@@ -2,6 +2,7 @@ import socket
 import struct
 import textwrap
 
+# Отступы для вывода информации
 TAB_1 = '\t - '
 TAB_2 = '\t\t - '
 TAB_3 = '\t\t\t - '
@@ -12,6 +13,7 @@ DATA_TAB_2 = '\t\t '
 DATA_TAB_3 = '\t\t\t '
 DATA_TAB_4 = '\t\t\t\t '
 
+# Список пар порт-приложение
 LIST_p2p = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 6884: 'BitTorrent', 6885: 'BitTorrent',
             6886: 'BitTorrent', 6887: 'BitTorrent', 6888: 'BitTorrent', 6889: 'BitTorrent', 6969: 'BitTorrent',
             411: 'Direct Connect', 412: 'Direct Connect', 2323: 'eDonkey', 3306: 'eDonkey', 4242: 'eDonkey',
@@ -25,48 +27,39 @@ LIST_p2p = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 6884: 'B
             4379: 'Steam (voice chat)', 4380: 'Steam (voice chat)', 4899: 'Radmin VPN', 12975: 'Hamachi',
             32976: 'Hamachi', 3479: 'Skype', 3480: 'Skype', 3481: 'Skype'}
 
-UDP_packets = {}
-
 
 def main(conn):
     output = []
 
     raw_data, addr = conn.recvfrom(65536)
     dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
-    # '\nEthernet...'
-    output.append('Ethernet Frame:')
-    output.append(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
-    # print('\nEthernet Frame:')
-    # print(TAB_1 + 'Destination: {}, Source: {}, Protocol: {}'.format(dest_mac, src_mac, eth_proto))
+    output.append('Ethernet кадр:')
+    output.append(TAB_1 + 'Назначение: {}, Источник: {}, Протокол: {}'.format(dest_mac, src_mac, eth_proto))
 
-
-    # 8 for IVp4
+    # IVp4
     if eth_proto == 8:
         (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
-        output.append(TAB_1 + 'IPv4 Packet:')
-        output.append(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
-        output.append(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
-        # print(TAB_1 + 'IPv4 Packet:')
-        # print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {}'.format(version, header_length, ttl))
-        # print(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(proto, src, target))
+        output.append(TAB_1 + 'IPv4 пакет:')
+        output.append(TAB_2 + 'Версия: {}, Длина заголовка: {}, TTL: {}'.format(version, header_length, ttl))
+        output.append(TAB_2 + 'Протокол: {}, Источник: {}, Назначение: {}'.format(proto, src, target))
 
         # ICMP
         # if proto == 1:
         #     icmp_type, code, checksum, data = icmp_packet(data)
-        #     print(TAB_1 + 'ICMP Packet:')
-        #     print(TAB_2 + 'Type: {}, Code: {}, Checksum: {}'.format(icmp_type, code, checksum))
-        #     print(TAB_2 + 'Data:')
-        #     print(format_multi_line(DATA_TAB_3, data))
+        #     output.append(TAB_1 + 'ICMP пакет:')
+        #     output.append(TAB_2 + 'Тип: {}, Код: {}, Контрольная сумма: {}'.format(icmp_type, code, checksum))
 
         # TCP
         if proto == 6:
-            src_port, dest_port, sequence, ack, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(
-                data)
+            src_port, dest_port, sequence, ack, flag_urg, flag_ack, \
+            flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(data)
+
             if LIST_p2p.get(src_port, False) or LIST_p2p.get(dest_port, False):
-                output.insert(0, "-----------------------------------Peer-To-Peer-----------------------------------")
-            output.append(TAB_1 + 'TCP Segment:')
-            output.append(TAB_2 + 'Source Port: {}, Destination Port: {}'.format(src_port, dest_port))
-            output.append(TAB_2 + 'Data Size: {}'.format(len(data)))
+                output.insert(0, "Обнаружен P2P трафик (методом анализирования портов)")
+
+            output.append(TAB_1 + 'TCP сегмент:')
+            output.append(TAB_2 + 'Порт источника: {}, Порт назначения: {}'.format(src_port, dest_port))
+            output.append(TAB_2 + 'Размер данных (байт): {}'.format(len(data)))
             # print(TAB_1 + 'TCP Segment:')
             # print(TAB_2 + 'Source Port: {}, Destination Port: {}'.format(src_port, dest_port))
             # print(TAB_2 + 'Sequence: {}, Acknowledgment: {}'.format(sequence, ack))
@@ -81,15 +74,14 @@ def main(conn):
         elif proto == 17:
             src_port, dest_port, length, data = udp_segment(data)
             if LIST_p2p.get(src_port, False) or LIST_p2p.get(dest_port, False):
-                output.insert(0, "-----------------------------------Peer-To-Peer-----------------------------------")
+                output.insert(0, "Обнаружен P2P трафик (методом анализирования портов)")
 
-            output.append(TAB_1 + 'UDP Segment:')
-            output.append(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
-            # print(TAB_1 + 'UDP Segment:')
-            # print(TAB_2 + 'Source Port: {}, Destination Port: {}, Length: {}'.format(src_port, dest_port, length))
-            output.append(TAB_2 + 'Data Size: {}'.format(len(data)))
+            output.append(TAB_1 + 'UDP сегмент:')
+            output.append(TAB_2 + 'Порт источника: {}, Порт назначения: {}, '
+                                  'Длина: {}'.format(src_port, dest_port, length))
+            output.append(TAB_2 + 'Размер данных (байт): {}'.format(len(data)))
 
-        # Other
+        # Для остальных протоколов
     #     else:
     #         print(TAB_1 + 'Data:')
     #         print(format_multi_line(DATA_TAB_2, data))
@@ -97,22 +89,23 @@ def main(conn):
     # else:
     #     print('Data:')
     #     print(format_multi_line(DATA_TAB_1, data))
+
     return output
 
 
-# Unpack Ethernet frame
+# Распаковка ethernet кадра
 def ethernet_frame(data):
     dest_mac, src_mac, proto = struct.unpack('! 6s 6s H', data[:14])
     return get_mac_addr(dest_mac), get_mac_addr(src_mac), socket.htons(proto), data[14:]
 
 
-# Return properly fromatted MAC address
+# Форматирование MAC-адреса
 def get_mac_addr(bytes_addr):
     bytes_str = map('{:02x}'.format, bytes_addr)
     return ':'.join(bytes_str).upper()
 
 
-# Unpacks IPv4 packet
+# Распаковка IPv4 пакета
 def ipv4_packet(data):
     version_header_length = data[0]
     version = version_header_length >> 4
@@ -121,18 +114,18 @@ def ipv4_packet(data):
     return version, header_length, ttl, proto, ipv4(src), ipv4(target), data[header_length:]
 
 
-# Return properly formatted IPv4 address
+# Форматирование IP-адреса
 def ipv4(addr):
     return '.'.join(map(str, addr))
 
 
-# Unpacks ICMP packet
+# Распаковка ICMP пакета
 def icmp_packet(data):
     icmp_type, code, checksum = struct.unpack('! B B H', data[:4])
     return icmp_type, code, checksum, data[4:]
 
 
-# Unpacks TCP segment
+# Распаковка TCP сегмента
 def tcp_segment(data):
     (src_port, dest_port, sequence, ack, offset_reserved_flags) = struct.unpack('! H H L L H', data[:14])
     offset = (offset_reserved_flags >> 12) * 4
@@ -145,13 +138,13 @@ def tcp_segment(data):
     return src_port, dest_port, sequence, ack, flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin, data[offset:]
 
 
-# Unpacks UDP segment
+# Распаковка UDP сегмента
 def udp_segment(data):
     src_port, dest_port, size = struct.unpack('! H H 2x H', data[:8])
     return src_port, dest_port, size, data[8:]
 
 
-# Format multi-line data
+# Форматирование многострочного вывода
 def format_multi_line(prefix, string, size=80):
     size -= len(prefix)
     if isinstance(string, bytes):
@@ -159,7 +152,3 @@ def format_multi_line(prefix, string, size=80):
         if size % 2:
             size -= 1
     return '\n'.join([prefix + line for line in textwrap.wrap(string, size)])
-
-
-# def sniff():
-#     return main(conn)
