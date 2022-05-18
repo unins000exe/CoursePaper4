@@ -43,12 +43,6 @@ def main(conn):
         output.append(TAB_2 + 'Версия: {}, Длина заголовка: {}, TTL: {}'.format(version, header_length, ttl))
         output.append(TAB_2 + 'Протокол: {}, Источник: {}, Назначение: {}'.format(proto, src, target))
 
-        # ICMP
-        # if proto == 1:
-        #     icmp_type, code, checksum, data = icmp_packet(data)
-        #     output.append(TAB_1 + 'ICMP пакет:')
-        #     output.append(TAB_2 + 'Тип: {}, Код: {}, Контрольная сумма: {}'.format(icmp_type, code, checksum))
-
         # TCP
         if proto == 6:
             src_port, dest_port, sequence, ack, flag_urg, flag_ack, \

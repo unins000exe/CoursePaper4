@@ -22,17 +22,14 @@ class Menu(tk.Frame):
         self.st = ttk.Button(self, text="Старт", command=self.sniff)
         self.st.grid(row=0, column=0)
 
-        self.last_out = []
 
     def sniff(self):
         out = sniffer.main(conn)
-        if out != self.last_out:
-            out.insert(0, str(datetime.now().strftime('%H:%M:%S')) + ":")
-            for s in out:
-                file.write(s + '\n')
-                self.output.insert('end', s + '\n')
-            self.last_out = out
-        root.after(500, self.sniff)  # сканирование каждые 0.5 сек
+        out.insert(0, str(datetime.now().strftime('%H:%M:%S')) + ":")
+        for s in out:
+            file.write(s + '\n')
+            self.output.insert('end', s + '\n')
+        root.after(300, self.sniff)  # сканирование каждые 0.3 сек
 
 
 conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
