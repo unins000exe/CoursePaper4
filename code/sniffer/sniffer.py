@@ -36,7 +36,7 @@ def main(conn):
     output.append('Ethernet кадр:')
     output.append(TAB_1 + 'Назначение: {}, Источник: {}, Протокол: {}'.format(dest_mac, src_mac, eth_proto))
 
-    # IVp4
+    # IPv4
     if eth_proto == 8:
         (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
         output.append(TAB_1 + 'IPv4 пакет:')
