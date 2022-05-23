@@ -16,3 +16,4 @@
 **/.vscode
 *.pygstyle
 *.pygtex
+code/sniffer/out.txt
