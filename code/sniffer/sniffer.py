@@ -4,17 +4,9 @@ import textwrap
 
 # Отступы для вывода информации
 TAB_1 = '\t - '
-TAB_2 = '\t\t - '
-TAB_3 = '\t\t\t - '
-TAB_4 = '\t\t\t\t - '
-
-DATA_TAB_1 = '\t '
-DATA_TAB_2 = '\t\t '
-DATA_TAB_3 = '\t\t\t '
-DATA_TAB_4 = '\t\t\t\t '
 
 # Список пар порт-приложение
-LIST_p2p = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 6884: 'BitTorrent', 6885: 'BitTorrent',
+LIST_P2P = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 6884: 'BitTorrent', 6885: 'BitTorrent',
             6886: 'BitTorrent', 6887: 'BitTorrent', 6888: 'BitTorrent', 6889: 'BitTorrent', 6969: 'BitTorrent',
             411: 'Direct Connect', 412: 'Direct Connect', 2323: 'eDonkey', 3306: 'eDonkey', 4242: 'eDonkey',
             4500: 'eDonkey', 4501: 'eDonkey', 4677: 'eDonkey', 4678: 'eDonkey', 4711: 'eDonkey', 4712: 'eDonkey',
@@ -28,59 +20,35 @@ LIST_p2p = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 6884: 'B
             32976: 'Hamachi', 3479: 'Skype', 3480: 'Skype', 3481: 'Skype'}
 
 # Список портов исключений
-Exceptions = {137, 138, 139, 445, 53, 123, 500, 554, 7070, 6970, 1755, 5000, 5001, 6112, 6868, 6899, 6667, 7000, 7514}
+EXCEPTIONS = {137, 138, 139, 445, 53, 123, 500, 554, 7070, 6970, 1755, 5000, 5001, 6112, 6868, 6899, 6667, 7000, 7514}
 
 TCP_addrs = set()
 UDP_addrs = set()
-exceptions_addr = set()
 p2p_addrs = set()
 p2p_addrs1 = set()
 p2p_pairs = set()
+rejected = set()  # адреса, не относящиеся к P2P
+UIP = ''  # локальный IP-адрес
 
+dict_ipport = dict()
+
+
+class IPPort:
+    def __init__(self, dst_ip, dst_port):
+        self.dst_ip = dst_ip
+        self.dst_port = dst_port
+        self.IPSet = set()
+        self.PortSet = set()
+
+    def add(self, ip, port):
+        self.IPSet.add(ip)
+        self.PortSet.add(port)
+
+    def check_p2p(self):
+        return len(self.IPSet) > 2 and (len(self.IPSet) - len(self.PortSet) < 2)
 
 
 def main(conn):
-    output = []
-
-    raw_data, addr = conn.recvfrom(65536)
-    dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
-    output.append('Ethernet кадр:')
-    output.append(TAB_1 + 'Назначение: {}, Источник: {}, Протокол: {}'.format(dest_mac, src_mac, eth_proto))
-
-    # IVp4
-    if eth_proto == 8:
-        (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
-        output.append(TAB_1 + 'IPv4 пакет:')
-        output.append(TAB_2 + 'Версия: {}, Длина заголовка: {}, TTL: {}'.format(version, header_length, ttl))
-        output.append(TAB_2 + 'Протокол: {}, Источник: {}, Назначение: {}'.format(proto, src, target))
-
-        # TCP
-        if proto == 6:
-            src_port, dest_port, sequence, ack, flag_urg, flag_ack, \
-            flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(data)
-
-            if LIST_p2p.get(src_port, False) or LIST_p2p.get(dest_port, False):
-                output.insert(0, "Обнаружен P2P трафик (методом анализирования портов)")
-
-            output.append(TAB_1 + 'TCP сегмент:')
-            output.append(TAB_2 + 'Порт источника: {}, Порт назначения: {}'.format(src_port, dest_port))
-            output.append(TAB_2 + 'Размер данных (байт): {}'.format(len(data)))
-
-        # UDP
-        elif proto == 17:
-            src_port, dest_port, length, data = udp_segment(data)
-            if LIST_p2p.get(src_port, False) or LIST_p2p.get(dest_port, False):
-                output.insert(0, "Обнаружен P2P трафик (методом анализирования портов)")
-
-            output.append(TAB_1 + 'UDP сегмент:')
-            output.append(TAB_2 + 'Порт источника: {}, Порт назначения: {}, '
-                                  'Длина: {}'.format(src_port, dest_port, length))
-            output.append(TAB_2 + 'Размер данных (байт): {}'.format(len(data)))
-
-    return output
-
-
-def main2(conn):
     output = []
     outline = ''
 
@@ -89,40 +57,102 @@ def main2(conn):
 
     # IVp4
     if eth_proto == 8:
-        (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
+        (version, header_length, ttl, proto, src, dest, data) = ipv4_packet(data)
 
         # TCP
         if proto == 6:
             src_port, dest_port, sequence, ack, flag_urg, flag_ack, \
             flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(data)
 
-            outline += TAB_1 + 'TCP: ' + src + ':' + str(src_port) + ' -> ' + target + ':' + \
+            outline += TAB_1 + 'TCP: ' + src + ':' + str(src_port) + ' -> ' + dest + ':' + \
                        str(dest_port) + ', ' + str(len(data)) + ' bytes'
             output.append(outline)
 
+            if LIST_P2P.get(src_port, False) or LIST_P2P.get(dest_port, False):
+                if src != UIP:
+                    p2p_addrs1.add(src)
+                else:
+                    p2p_addrs1.add(dest)
+
             TCP_addrs.add(src)
-            TCP_addrs.add(target)
+            TCP_addrs.add(dest)
+            check_exceptions(src, src_port)
+            check_exceptions(dest, dest_port)
+            add_ipport(dest, dest_port, src, src_port)
+
 
         # UDP
         elif proto == 17:
             src_port, dest_port, length, data = udp_segment(data)
 
-            outline += TAB_1 + 'UDP: ' + src + ':' + str(src_port) + ' -> ' + target + ':' + \
+            outline += TAB_1 + 'UDP: ' + src + ':' + str(src_port) + ' -> ' + dest + ':' + \
                        str(dest_port) + ', ' + str(len(data)) + ' bytes'
             output.append(outline)
 
+            if LIST_P2P.get(src_port, False) or LIST_P2P.get(dest_port, False):
+                if src != UIP:
+                    p2p_addrs1.add(src)
+                else:
+                    p2p_addrs1.add(dest)
+
             UDP_addrs.add(src)
-            UDP_addrs.add(target)
+            UDP_addrs.add(dest)
+            check_exceptions(src, src_port)
+            check_exceptions(dest, dest_port)
+            add_ipport(dest, dest_port, src, src_port)
 
         check_intersection()
 
     return output
 
+def get_local_ip_addr():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    global UIP
+    UIP = s.getsockname()[0]
+    s.close()
+    return UIP
+
+
+def add_ipport(dest, dest_port, src, src_port):
+    ipport = dest + str(dest_port)
+    if ipport not in dict_ipport:
+        x = IPPort(dest, dest_port)
+        x.add(src, src_port)
+        dict_ipport[ipport] = x
+    else:
+        dict_ipport[ipport].add(src, src_port)
+
 
 def check_intersection():
     inter = TCP_addrs & UDP_addrs
-    if inter:
-        print(inter)
+    return inter
+
+
+def check_exceptions(addr, port):
+    if addr != UIP and port in EXCEPTIONS:
+        rejected.add(addr)
+        return False
+    else:
+        return True
+
+
+def find_p2p():
+    # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP с учётом исключений
+    inter = check_intersection()
+    for addr in inter:
+        if addr not in rejected and addr != UIP:
+            p2p_addrs.add(addr)
+
+    # 2 Заполнение p2p_addrs адресами, выбранными исходя из check_p2p с учётом исключений
+    for ipport in dict_ipport:
+        ipp = dict_ipport[ipport]
+        ip = ipp.dst_ip
+        port = ipp.dst_port
+        if ipp.check_p2p() and check_exceptions(ip, port) and ip != UIP:
+            p2p_addrs.add(ip)
+
+    return p2p_addrs
 
 
 # Распаковка ethernet кадра
