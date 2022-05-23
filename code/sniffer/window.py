@@ -29,7 +29,7 @@ class Menu(tk.Frame):
         for s in out:
             file.write(s + '\n')
             self.output.insert('end', s + '\n')
-        root.after(300, self.sniff)  # сканирование каждые 0.3 сек
+        root.after(200, self.sniff)  # сканирование каждые 0.2 сек
 
 
 conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
