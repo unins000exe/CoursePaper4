@@ -27,6 +27,17 @@ LIST_p2p = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 6884: 'B
             4379: 'Steam (voice chat)', 4380: 'Steam (voice chat)', 4899: 'Radmin VPN', 12975: 'Hamachi',
             32976: 'Hamachi', 3479: 'Skype', 3480: 'Skype', 3481: 'Skype'}
 
+# Список портов исключений
+Exceptions = {137, 138, 139, 445, 53, 123, 500, 554, 7070, 6970, 1755, 5000, 5001, 6112, 6868, 6899, 6667, 7000, 7514}
+
+TCP_addrs = set()
+UDP_addrs = set()
+exceptions_addr = set()
+p2p_addrs = set()
+p2p_addrs1 = set()
+p2p_pairs = set()
+
+
 
 def main(conn):
     output = []
@@ -36,7 +47,7 @@ def main(conn):
     output.append('Ethernet кадр:')
     output.append(TAB_1 + 'Назначение: {}, Источник: {}, Протокол: {}'.format(dest_mac, src_mac, eth_proto))
 
-    # IPv4
+    # IVp4
     if eth_proto == 8:
         (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
         output.append(TAB_1 + 'IPv4 пакет:')
@@ -66,16 +77,52 @@ def main(conn):
                                   'Длина: {}'.format(src_port, dest_port, length))
             output.append(TAB_2 + 'Размер данных (байт): {}'.format(len(data)))
 
-        # Для остальных протоколов
-    #     else:
-    #         print(TAB_1 + 'Данные:')
-    #         print(format_multi_line(DATA_TAB_2, data))
-    #
-    # else:
-    #     print('Data:')
-    #     print(format_multi_line(DATA_TAB_1, data))
+    return output
+
+
+def main2(conn):
+    output = []
+    outline = ''
+
+    raw_data, addr = conn.recvfrom(65536)
+    dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
+
+    # IVp4
+    if eth_proto == 8:
+        (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
+
+        # TCP
+        if proto == 6:
+            src_port, dest_port, sequence, ack, flag_urg, flag_ack, \
+            flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(data)
+
+            outline += TAB_1 + 'TCP: ' + src + ':' + str(src_port) + ' -> ' + target + ':' + \
+                       str(dest_port) + ', ' + str(len(data)) + ' bytes'
+            output.append(outline)
+
+            TCP_addrs.add(src)
+            TCP_addrs.add(target)
+
+        # UDP
+        elif proto == 17:
+            src_port, dest_port, length, data = udp_segment(data)
+
+            outline += TAB_1 + 'UDP: ' + src + ':' + str(src_port) + ' -> ' + target + ':' + \
+                       str(dest_port) + ', ' + str(len(data)) + ' bytes'
+            output.append(outline)
+
+            UDP_addrs.add(src)
+            UDP_addrs.add(target)
+
+        check_intersection()
 
     return output
+
+
+def check_intersection():
+    inter = TCP_addrs & UDP_addrs
+    if inter:
+        print(inter)
 
 
 # Распаковка ethernet кадра
