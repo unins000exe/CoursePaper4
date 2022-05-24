@@ -12,6 +12,7 @@ class Menu(tk.Frame):
         super().__init__(master)
         self.master = master
         self.grid(row=0, column=0, sticky=tk.NSEW)
+        self.last_time = ''
 
         self.label1 = ttk.Label(self, text='Вывод TCP/UDP трафика')
         self.label1.grid(row=0, column=0, pady=5)
@@ -30,8 +31,11 @@ class Menu(tk.Frame):
         self.p2p_lb.grid(row=1, column=2, sticky=tk.N)
 
         self.scroll_p2p_lb = ttk.Scrollbar(self, command=self.output.yview)
-        self.scroll_p2p_lb.grid(row=1, column=3, padx=(0, 5))
+        self.scroll_p2p_lb.grid(row=1, column=3, padx=(0, 0))
         self.p2p_lb.config(yscrollcommand=self.scroll_p2p_lb.set)
+
+        self.stop_btn = ttk.Button(self, text='Стоп', command=self.stop)
+        self.stop_btn.grid(row=2, column=2, pady=(0, 10))
 
         self.sniff()
         self.find_p2p()
@@ -52,19 +56,32 @@ class Menu(tk.Frame):
                         out.insert(0, TAB_2 + 'P2P - обнаружен методом анализирования портов,')
                 elif addr in out[0]:
                     out.insert(0, TAB_2 + 'P2P - обнаружен методом анализирования портов,')
+            time = str(datetime.now().strftime('%H:%M:%S')) + ":"
+            if time != self.last_time:
+                out.insert(0, time)
+            self.last_time = time
 
-            out.insert(0, str(datetime.now().strftime('%H:%M:%S')) + ":")
             for s in out:
                 file.write(s + '\n')
                 self.output.insert('end', s + '\n')
-        root.after(200, self.sniff)  # сканирование каждые 0.2 сек
+        root.after(100, self.sniff)  # сканирование каждые 0.1 сек
 
     def find_p2p(self):
         sniffer.find_p2p()
         self.p2p_lb.delete(0, 'end')
         for addr in sniffer.p2p_addrs:
             self.p2p_lb.insert('end', addr)
-        root.after(15000, self.find_p2p)
+        for addr in sniffer.p2p_addrs1:
+            self.p2p_lb.insert('end', addr)
+        root.after(15000, self.find_p2p)  # обнаружение p2p методом анализирования потоков запускается каждые 15 секунд
+
+    def stop(self):
+        file2.write('Список IP-адресов, взаимодействующих с ' + UIP + ' через P2P: \n')
+        for ip in self.p2p_lb.get(0, 'end'):
+            file2.write(' * ' + ip + '\n')
+        file2.write('Конец списка. \n')
+
+        root.destroy()
 
 
 conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
@@ -72,11 +89,15 @@ conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
 # Определение локального IP адреса компьютера
 UIP = sniffer.get_local_ip_addr()
 
-# в файл сохраняется последний вывод программы
+# В файл сохраняется последний вывод программы
 file = open('out.txt', 'w+')
+# Список IP-адресов, взаимодействующих через P2P
+file2 = open('ip_list.txt', 'w+')
+
 root = tk.Tk()
 root.title("Анализатор сетевого трафика")
 menu = Menu(root)
 root.mainloop()
+file2.close()
 file.close()
 conn.close()
