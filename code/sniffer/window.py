@@ -52,13 +52,13 @@ class Menu(tk.Frame):
 
             # Вывод метода, которым был обнаружен P2P
             if out[2] in sniffer.p2p_addrs_p or out[6] in sniffer.p2p_addrs_p:
-                if out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) or \
+                if out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) and \
                         out[6] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs):
                     self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования портов и потоков,\n')
                 else:
                     self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования портов,\n')
 
-            elif out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) or \
+            elif out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) and \
                     out[6] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs):
                 self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования потоков\n')
 

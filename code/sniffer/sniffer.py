@@ -77,7 +77,7 @@ def main(conn):
             output = [TAB_1, 'TCP: ', src, ':', str(src_port), ' -> ', dest,  ':',
                       str(dest_port),  ', ',  str(len(data)), ' bytes']
 
-            save(src, dest, src_port, dest_port)
+            save(True, src, dest, src_port, dest_port)
             check_ports(src, dest, src_port, dest_port)
 
         # UDP
@@ -88,16 +88,18 @@ def main(conn):
                       str(dest_port),  ', ',  str(len(data)), ' bytes']
 
             check_ports(src, dest, src_port, dest_port)
-            save(src, dest, src_port, dest_port)
+            save(False, src, dest, src_port, dest_port)
 
     return output
 
 
-def save(src, dest, src_port, dest_port):
-    TCP_addrs.add(src)
-    TCP_addrs.add(dest)
-    UDP_addrs.add(src)
-    UDP_addrs.add(dest)
+def save(tcp, src, dest, src_port, dest_port):
+    if tcp:
+        TCP_addrs.add(src)
+        TCP_addrs.add(dest)
+    else:
+        UDP_addrs.add(src)
+        UDP_addrs.add(dest)
     check_exceptions(src, src_port)
     check_exceptions(dest, dest_port)
     add_ipport(dest, dest_port, src, src_port)
@@ -133,9 +135,11 @@ def find_p2p():
 
     # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP с учётом исключений
     inter = TCP_addrs & UDP_addrs
+    print('inter ' + str(inter))
     for addr in inter:
         if addr not in rejected:
             p2p_addrs.add(addr)
+            print(addr + ' TCP and UDP')
 
     # 2 Заполнение p2p_addrs адресами, выбранными исходя из check_p2p с учётом исключений
     for ipport in dict_ipport:
