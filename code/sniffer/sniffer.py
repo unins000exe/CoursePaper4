@@ -24,11 +24,11 @@ EXCEPTIONS = {137, 138, 139, 445, 53, 123, 500, 554, 7070, 6970, 1755, 5000, 500
 
 TCP_addrs = set()
 UDP_addrs = set()
-p2p_addrs = set()  # IP-адреса, отнесённые к P2P методом анализирования потоков
-p2p_addrs1 = set()  # IP-адреса, отнесённые к P2P методом анализирования портов
+p2p_addrs = set()
+p2p_addrs1 = set()
+p2p_addrs_p = set()
+p2p_addrs_res = set()
 rejected = set()  # адреса, не относящиеся к P2P
-UIP = ''  # локальный IP-адрес
-
 dict_ipport = dict()  # словарь вида (ip+port -> объект класса IPPort)
 
 
@@ -43,14 +43,25 @@ class IPPort:
         self.IPSet.add(ip)
         self.PortSet.add(port)
 
+    # Добавление в p2p_addrs1 адресов, которые взаимодействовали с адресами из p2p_addrs
+    def add_to_p2p_addrs1(self):
+        for addr in p2p_addrs:
+            if addr in self.IPSet:
+                p2p_addrs1.add(addr)
+
+    # Проверка IP/Port-эвристики
     def check_p2p(self):
-        return len(self.IPSet) > 2 and (len(self.IPSet) - len(self.PortSet) < 2)
+        dif = 2
+        # Если найдётся порт из списка исключений, то разница между IPSet и PortSet должна быть увеличена до 10
+        for port in self.PortSet:
+            if port in EXCEPTIONS:
+                dif = 10
+                break
+        return len(self.IPSet) > 2 and (len(self.IPSet) - len(self.PortSet) < dif)
 
 
 def main(conn):
-    output = []
-    outline = ''
-
+    output = ''
     raw_data, addr = conn.recvfrom(65536)
     dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
 
@@ -63,9 +74,8 @@ def main(conn):
             src_port, dest_port, sequence, ack, flag_urg, flag_ack, \
             flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(data)
 
-            outline += TAB_1 + 'TCP: ' + src + ':' + str(src_port) + ' -> ' + dest + ':' + \
-                       str(dest_port) + ', ' + str(len(data)) + ' bytes'
-            output.append(outline)
+            output = [TAB_1, 'TCP: ', src, ':', str(src_port), ' -> ', dest,  ':',
+                      str(dest_port),  ', ',  str(len(data)), ' bytes']
 
             save(src, dest, src_port, dest_port)
             check_ports(src, dest, src_port, dest_port)
@@ -74,25 +84,13 @@ def main(conn):
         elif proto == 17:
             src_port, dest_port, length, data = udp_segment(data)
 
-            outline += TAB_1 + 'UDP: ' + src + ':' + str(src_port) + ' -> ' + dest + ':' + \
-                       str(dest_port) + ', ' + str(len(data)) + ' bytes'
-            output.append(outline)
+            output = [TAB_1, 'UDP: ', src,  ':', str(src_port), ' -> ', dest,  ':',
+                      str(dest_port),  ', ',  str(len(data)), ' bytes']
 
             check_ports(src, dest, src_port, dest_port)
             save(src, dest, src_port, dest_port)
 
-        check_intersection()
-
     return output
-
-
-def get_local_ip_addr():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    global UIP
-    UIP = s.getsockname()[0]
-    s.close()
-    return UIP
 
 
 def save(src, dest, src_port, dest_port):
@@ -106,11 +104,11 @@ def save(src, dest, src_port, dest_port):
 
 
 def check_ports(src, dest, src_port, dest_port):
-    if LIST_P2P.get(src_port, False) or LIST_P2P.get(dest_port, False):
-        if src != UIP:
-            p2p_addrs1.add(src)
-        else:
-            p2p_addrs1.add(dest)
+    if LIST_P2P.get(src_port, False):
+        p2p_addrs_p.add(src)
+    elif LIST_P2P.get(dest_port, False):
+        p2p_addrs_p.add(dest)
+
 
 def add_ipport(dest, dest_port, src, src_port):
     ipport = dest + str(dest_port)
@@ -122,13 +120,8 @@ def add_ipport(dest, dest_port, src, src_port):
         dict_ipport[ipport].add(src, src_port)
 
 
-def check_intersection():
-    inter = TCP_addrs & UDP_addrs
-    return inter
-
-
 def check_exceptions(addr, port):
-    if addr != UIP and port in EXCEPTIONS:
+    if port in EXCEPTIONS:
         rejected.add(addr)
         return False
     else:
@@ -136,21 +129,27 @@ def check_exceptions(addr, port):
 
 
 def find_p2p():
+    global p2p_addrs_res
+
     # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP с учётом исключений
-    inter = check_intersection()
+    inter = TCP_addrs & UDP_addrs
     for addr in inter:
-        if addr not in rejected and addr != UIP:
+        if addr not in rejected:
             p2p_addrs.add(addr)
 
     # 2 Заполнение p2p_addrs адресами, выбранными исходя из check_p2p с учётом исключений
     for ipport in dict_ipport:
         ipp = dict_ipport[ipport]
+        ipp.add_to_p2p_addrs1()  # Заполнение массива p2p_addrs1
         ip = ipp.dst_ip
         port = ipp.dst_port
-        if ipp.check_p2p() and check_exceptions(ip, port) and ip != UIP:
-            p2p_addrs.add(ip)
+        if ipp.check_p2p() and check_exceptions(ip, port):
+            print(ip + ' - IP/Port-эвристика')
+            p2p_addrs_res.add(ip)
 
-    return p2p_addrs
+    p2p_addrs_res = p2p_addrs.union(p2p_addrs1, p2p_addrs_p)
+
+    return p2p_addrs_res
 
 
 # Распаковка ethernet кадра
