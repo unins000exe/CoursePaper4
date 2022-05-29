@@ -25,10 +25,10 @@ class Menu(tk.Frame):
         self.scroll_out.grid(row=1, column=1, padx=(0, 15))
         self.output.config(yscrollcommand=self.scroll_out.set)
 
-        self.label2 = ttk.Label(self, text='Список IP-адресов, взаимодействующих через P2P')
+        self.label2 = ttk.Label(self, text='Список адресов (пар адресов), взаимодействующих через P2P')
         self.label2.grid(row=0, column=2, pady=5, sticky=tk.N)
 
-        self.p2p_lb = tk.Listbox(self, height=30)
+        self.p2p_lb = tk.Listbox(self, height=20)
         self.p2p_lb.grid(row=1, column=2, sticky=tk.N)
 
         self.scroll_p2p_lb = ttk.Scrollbar(self, command=self.output.yview)
@@ -48,19 +48,24 @@ class Menu(tk.Frame):
             time = str(datetime.now().strftime('%H:%M:%S')) + ":\n"
             if time != self.last_time:
                 self.output.insert('end', time)
+                file.write(time)
             self.last_time = time
 
+            # ИЗМЕНИТЬ! ИЗМЕНИТЬ! ИЗМЕНИТЬ!
             # Вывод метода, которым был обнаружен P2P
-            if out[2] in sniffer.p2p_addrs_p or out[6] in sniffer.p2p_addrs_p:
-                if out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) and \
-                        out[6] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs):
-                    self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования портов и потоков,\n')
-                else:
-                    self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования портов,\n')
-
-            elif out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) and \
-                    out[6] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs):
-                self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования потоков\n')
+            # if out[2] in sniffer.p2p_addrs_p or out[6] in sniffer.p2p_addrs_p:
+            #     if out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) and \
+            #             out[6] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs):
+            #         self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования портов и потоков,\n')
+            #         file.write(TAB_2 + 'P2P - обнаружен методом анализирования портов и потоков,\n')
+            #     else:
+            #         self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования портов,\n')
+            #         file.write(TAB_2 + 'P2P - обнаружен методом анализирования портов,\n')
+            #
+            # elif out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) and \
+            #         out[6] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs):
+            #     self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования потоков\n')
+            #     file.write(TAB_2 + 'P2P - обнаружен методом анализирования потоков\n')
 
             # Вывод информации о пакете
             for s in out:
@@ -74,8 +79,8 @@ class Menu(tk.Frame):
     def find_p2p(self):
         sniffer.find_p2p()
         self.p2p_lb.delete(0, 'end')
-        for addr in sniffer.p2p_addrs_res:
-            self.p2p_lb.insert('end', addr)
+        for addr in sniffer.p2p_pairs:
+            self.p2p_lb.insert('end', addr[0] + ":" + str(addr[1]))
         root.after(15000, self.find_p2p)  # обнаружение p2p методом анализирования потоков запускается каждые 15 секунд
 
     def stop(self):
