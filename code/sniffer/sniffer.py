@@ -29,6 +29,8 @@ p2p_addrs1 = set()
 p2p_addrs_p = set()
 p2p_addrs_res = set()
 p2p_pairs = set()
+p2p_pairs_p = set()
+p2p_pairs_ipp = set()
 rejected = set()  # адреса, не относящиеся к P2P
 dict_ipport = dict()  # словарь вида (ip+port -> объект класса IPPort)
 
@@ -54,12 +56,13 @@ class IPPort:
     # Проверка IP/Port-эвристики
     def check_p2p(self):
         dif = 2
-        # Если найдётся порт из списка исключений, то разница между IPSet и PortSet должна быть увеличена до 10
-        for port in self.PortSet:
-            if port in EXCEPTIONS:
-                dif = 10
-                break
-        self.p2p = len(self.IPSet) > 2 and (len(self.IPSet) - len(self.PortSet) < dif)
+        # Если порт из списка исключений, то разница между IPSet и PortSet должна быть увеличена до 10
+        if self.dst_port in EXCEPTIONS:
+            dif = 10
+        if (self.dst_ip, self.dst_port) not in rejected:
+            self.p2p = len(self.IPSet) > 2 and (len(self.IPSet) - len(self.PortSet) < dif)
+        else:
+            self.p2p = False
         return self.p2p
 
 
@@ -78,7 +81,7 @@ def main(conn):
             flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(data)
 
             output = [TAB_1, 'TCP: ', src, ':', str(src_port), ' -> ', dest,  ':',
-                      str(dest_port),  ', ',  str(len(data)), ' bytes']
+                      str(dest_port),  ', ',  str(len(data)), ' Б']
 
             save(True, src, dest, src_port, dest_port)
             check_ports(src, dest, src_port, dest_port)
@@ -88,7 +91,7 @@ def main(conn):
             src_port, dest_port, length, data = udp_segment(data)
 
             output = [TAB_1, 'UDP: ', src,  ':', str(src_port), ' -> ', dest,  ':',
-                      str(dest_port),  ', ',  str(len(data)), ' bytes']
+                      str(dest_port),  ', ',  str(len(data)), ' Б']
 
             check_ports(src, dest, src_port, dest_port)
             save(False, src, dest, src_port, dest_port)
@@ -98,14 +101,14 @@ def main(conn):
 
 def save(tcp, src, dest, src_port, dest_port):
     if tcp:
-        TCP_addrs.add((src, src_port))
-        TCP_addrs.add((dest, dest_port))
-        # TCP_addrs.add((src, dest))
+        # TCP_addrs.add((src, src_port))
+        # TCP_addrs.add((dest, dest_port))
+        TCP_addrs.add((src, dest))
         # TCP_addrs.add((dest, src))
     else:
-        UDP_addrs.add((src, src_port))
-        UDP_addrs.add((dest, dest_port))
-        # UDP_addrs.add((src, dest))
+        # UDP_addrs.add((src, src_port))
+        # UDP_addrs.add((dest, dest_port))
+        UDP_addrs.add((src, dest))
         # UDP_addrs.add((dest, src))
     check_exceptions(src, dest, src_port, dest_port)
     add_ipport(dest, dest_port, src, src_port)
@@ -113,9 +116,9 @@ def save(tcp, src, dest, src_port, dest_port):
 
 def check_ports(src, dest, src_port, dest_port):
     if LIST_P2P.get(src_port, False):
-        p2p_pairs.add((src, src_port))
+        p2p_pairs_p.add((src, src_port))
     elif LIST_P2P.get(dest_port, False):
-        p2p_pairs.add((dest, dest_port))
+        p2p_pairs_p.add((dest, dest_port))
 
 
 def add_ipport(dest, dest_port, src, src_port):
@@ -142,14 +145,10 @@ def find_p2p():
 
     # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP с учётом исключений
     inter = TCP_addrs & UDP_addrs
-    # for addrs in inter:
-    #     for addr in addrs:
-    #         if addr not in rejected:
-    #             p2p_addrs.add(addr)
-    for addr in inter:
-        if addr[0] not in rejected:
-            p2p_addrs.add(addr)
-    print(p2p_addrs)
+    for pair_addrs in inter:
+        for ipport in rejected:
+            if pair_addrs[0] != ipport[0] and pair_addrs[1] != ipport[0]:
+                p2p_addrs.add(pair_addrs)
 
     # 2 Заполнение p2p_addrs адресами, выбранными исходя из check_p2p с учётом исключений
     for ipport in dict_ipport:
@@ -157,14 +156,8 @@ def find_p2p():
         ipp.add_to_p2p_addrs1()  # Заполнение массива p2p_addrs1
         ip = ipp.dst_ip
         port = ipp.dst_port
-        if ipp.check_p2p() and ip not in rejected:
-            p2p_addrs_res.add(ip)
-            p2p_pairs.add((ip, port))
-            # print('IP/Port ' + ip + ':' + str(port))
-
-    p2p_addrs_res = p2p_addrs.union(p2p_addrs1, p2p_addrs_p)
-
-    return p2p_addrs_res
+        if ipp.check_p2p() and (ip, port) not in rejected:
+            p2p_pairs_ipp.add((ip, port))
 
 
 # Распаковка ethernet кадра

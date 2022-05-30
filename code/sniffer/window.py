@@ -15,28 +15,51 @@ class Menu(tk.Frame):
         self.grid(row=0, column=0, sticky=tk.NSEW)
         self.last_time = ''
 
-        self.label1 = ttk.Label(self, text='Вывод TCP/UDP трафика')
-        self.label1.grid(row=0, column=0, pady=5)
+        self.frame_out = ttk.LabelFrame(self, text='Вывод TCP/UDP трафика')
+        self.frame_out.grid(row=0, column=0)
 
-        self.output = tk.Text(self, width=75, height=35)
-        self.output.grid(row=1, column=0, padx=(5, 0), sticky=tk.NW)
+        # self.label1 = ttk.Label(self, text='Вывод TCP/UDP трафика')
+        # self.label1.grid(row=0, column=0, pady=5)
 
-        self.scroll_out = ttk.Scrollbar(self, command=self.output.yview)
-        self.scroll_out.grid(row=1, column=1, padx=(0, 15))
+        self.output = tk.Text(self.frame_out, width=70, height=35)
+        self.output.grid(row=0, column=0, padx=(5, 0), sticky=tk.NW)
+
+        self.scroll_out = ttk.Scrollbar(self.frame_out, command=self.output.yview)
+        # self.scroll_out.grid(row=0, column=1, padx=(0, 15))
         self.output.config(yscrollcommand=self.scroll_out.set)
 
-        self.label2 = ttk.Label(self, text='Список адресов (пар адресов), взаимодействующих через P2P')
-        self.label2.grid(row=0, column=2, pady=5, sticky=tk.N)
+        self.frame = ttk.LabelFrame(self, text='Список адресов, взаимодействующих через P2P')
+        self.frame.grid(row=0, column=1)
 
-        self.p2p_lb = tk.Listbox(self, height=20)
-        self.p2p_lb.grid(row=1, column=2, sticky=tk.N)
+        self.label2 = ttk.Label(self.frame, text='Анализ портов')
+        self.label2.grid(row=0, column=0, pady=5, sticky=tk.N)
 
-        self.scroll_p2p_lb = ttk.Scrollbar(self, command=self.output.yview)
-        self.scroll_p2p_lb.grid(row=1, column=3, padx=(0, 0))
+        self.p2p_lb = tk.Listbox(self.frame, height=20)
+        self.p2p_lb.grid(row=1, column=0, sticky=tk.N)
+
+        self.scroll_p2p_lb = ttk.Scrollbar(self.frame, command=self.output.yview)
         self.p2p_lb.config(yscrollcommand=self.scroll_p2p_lb.set)
 
+        self.label3 = ttk.Label(self.frame, text='IP/Port-эвристика')
+        self.label3.grid(row=0, column=1, pady=5, sticky=tk.N)
+
+        self.p2p_lb2 = tk.Listbox(self.frame, height=20)
+        self.p2p_lb2.grid(row=1, column=1, sticky=tk.N, padx=5)
+
+        self.scroll_p2p_lb2 = ttk.Scrollbar(self.frame, command=self.output.yview)
+        self.p2p_lb2.config(yscrollcommand=self.scroll_p2p_lb.set)
+
+        self.label4 = ttk.Label(self.frame, text='TCP/UDP-эвристика')
+        self.label4.grid(row=0, column=2, pady=5, sticky=tk.N)
+
+        self.p2p_lb3 = tk.Listbox(self.frame, width=30)
+        self.p2p_lb3.grid(row=1, column=2, sticky=tk.N)
+
+        self.scroll_p2p_lb3 = ttk.Scrollbar(self.frame, command=self.output.yview)
+        self.p2p_lb3.config(yscrollcommand=self.scroll_p2p_lb.set)
+
         self.stop_btn = ttk.Button(self, text='Стоп', command=self.stop)
-        self.stop_btn.grid(row=2, column=2, pady=(0, 10))
+        self.stop_btn.grid(row=1, column=0, pady=(10, 10))
 
         self.sniff()
         self.find_p2p()
@@ -79,14 +102,30 @@ class Menu(tk.Frame):
     def find_p2p(self):
         sniffer.find_p2p()
         self.p2p_lb.delete(0, 'end')
-        for addr in sniffer.p2p_pairs:
+        self.p2p_lb2.delete(0, 'end')
+        self.p2p_lb3.delete(0, 'end')
+        for addr in sniffer.p2p_pairs_p:
             self.p2p_lb.insert('end', addr[0] + ":" + str(addr[1]))
+        for addr in sniffer.p2p_pairs_ipp:
+            self.p2p_lb2.insert('end', addr[0] + ":" + str(addr[1]))
+        for addrs in sniffer.p2p_addrs:
+            self.p2p_lb3.insert('end', addrs[0] + " < = > " + addrs[1])
         root.after(15000, self.find_p2p)  # обнаружение p2p методом анализирования потоков запускается каждые 15 секунд
 
     def stop(self):
         file2.write('Список IP-адресов, взаимодействующих через P2P: \n')
-        for ip in self.p2p_lb.get(0, 'end'):
-            file2.write(' * ' + ip + '\n')
+
+        file2.write('Анализ портов: \n')
+        for row in self.p2p_lb.get(0, 'end'):
+            file2.write(' * ' + row + '\n')
+
+        file2.write('IP/Port-эвристика: \n')
+        for row in self.p2p_lb2.get(0, 'end'):
+            file2.write(' * ' + row + '\n')
+
+        file2.write('TCP/UDP-эвристика: \n')
+        for row in self.p2p_lb3.get(0, 'end'):
+            file2.write(' * ' + row + '\n')
         file2.write('Конец списка. \n')
 
         root.destroy()
