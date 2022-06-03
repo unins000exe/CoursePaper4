@@ -4,6 +4,8 @@ from tkinter import ttk
 import socket
 import sniffer
 from datetime import datetime
+import os
+import sys
 
 TAB_2 = '\t * '
 
@@ -61,11 +63,11 @@ class Menu(tk.Frame):
         self.stop_btn = ttk.Button(self, text='Стоп', command=self.stop)
         self.stop_btn.grid(row=1, column=0, pady=(10, 10))
 
-        self.sniff()
-        self.find_p2p()
+        self.call_sniff()
+        self.call_find_p2p()
 
-    def sniff(self):
-        out = sniffer.main(conn)
+    def call_sniff(self):
+        out = sniffer.sniff(conn)
         if out:
             # Вывод времени
             time = str(datetime.now().strftime('%H:%M:%S')) + ":\n"
@@ -81,9 +83,9 @@ class Menu(tk.Frame):
             file.write('\n')
             self.output.insert('end', '\n')
 
-        root.after(100, self.sniff)  # сканирование каждые 0.1 сек
+        root.after(100, self.call_sniff)  # сканирование каждые 0.1 сек
 
-    def find_p2p(self):
+    def call_find_p2p(self):
         sniffer.find_p2p()
         self.p2p_lb.delete(0, 'end')
         self.p2p_lb2.delete(0, 'end')
@@ -94,7 +96,7 @@ class Menu(tk.Frame):
             self.p2p_lb2.insert('end', addr[0] + ":" + str(addr[1]))
         for addrs in sniffer.p2p_addrs:
             self.p2p_lb3.insert('end', addrs[0] + " < = > " + addrs[1])
-        root.after(15000, self.find_p2p)  # обнаружение p2p методом анализирования потоков запускается каждые 15 секунд
+        root.after(15000, self.call_find_p2p)  # обнаружение p2p методом анализирования потоков запускается каждые 15 секунд
 
     def stop(self):
         file2.write('Список IP-адресов, взаимодействующих через P2P: \n')
@@ -106,16 +108,21 @@ class Menu(tk.Frame):
         file2.write('IP/Port-эвристика: \n')
         for row in self.p2p_lb2.get(0, 'end'):
             file2.write(' * ' + row + '\n')
-
         file2.write('TCP/UDP-эвристика: \n')
-        for row in self.p2p_lb3.get(0, 'end'):
-            file2.write(' * ' + row + '\n')
-        file2.write('Конец списка. \n')
+                for row in self.p2p_lb3.get(0, 'end'):
+                    file2.write(' * ' + row + '\n')
+                file2.write('Конец списка. \n')
 
-        root.destroy()
+                root.destroy()
 
+interface = 'enp0s3'
+if len(sys.argv) > 1:
+    interface = sys.argv[1]
+
+ret = os.system("ip link set {} promisc on".format(interface))
 
 conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
+conn.bind((interface, 0))
 
 # В файл сохраняется последний вывод программы
 file = open('out.txt', 'w+')
