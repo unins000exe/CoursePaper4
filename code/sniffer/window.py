@@ -74,22 +74,6 @@ class Menu(tk.Frame):
                 file.write(time)
             self.last_time = time
 
-            # ИЗМЕНИТЬ! ИЗМЕНИТЬ! ИЗМЕНИТЬ!
-            # Вывод метода, которым был обнаружен P2P
-            # if out[2] in sniffer.p2p_addrs_p or out[6] in sniffer.p2p_addrs_p:
-            #     if out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) and \
-            #             out[6] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs):
-            #         self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования портов и потоков,\n')
-            #         file.write(TAB_2 + 'P2P - обнаружен методом анализирования портов и потоков,\n')
-            #     else:
-            #         self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования портов,\n')
-            #         file.write(TAB_2 + 'P2P - обнаружен методом анализирования портов,\n')
-            #
-            # elif out[2] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs) and \
-            #         out[6] in sniffer.p2p_addrs1.union(sniffer.p2p_addrs):
-            #     self.output.insert('end', TAB_2 + 'P2P - обнаружен методом анализирования потоков\n')
-            #     file.write(TAB_2 + 'P2P - обнаружен методом анализирования потоков\n')
-
             # Вывод информации о пакете
             for s in out:
                 file.write(s)

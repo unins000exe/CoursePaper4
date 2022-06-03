@@ -26,8 +26,6 @@ TCP_addrs = set()
 UDP_addrs = set()
 p2p_addrs = set()
 p2p_addrs1 = set()
-p2p_addrs_p = set()
-p2p_addrs_res = set()
 p2p_pairs = set()
 p2p_pairs_p = set()
 p2p_pairs_ipp = set()
@@ -101,15 +99,9 @@ def main(conn):
 
 def save(tcp, src, dest, src_port, dest_port):
     if tcp:
-        # TCP_addrs.add((src, src_port))
-        # TCP_addrs.add((dest, dest_port))
         TCP_addrs.add((src, dest))
-        # TCP_addrs.add((dest, src))
     else:
-        # UDP_addrs.add((src, src_port))
-        # UDP_addrs.add((dest, dest_port))
         UDP_addrs.add((src, dest))
-        # UDP_addrs.add((dest, src))
     check_exceptions(src, dest, src_port, dest_port)
     add_ipport(dest, dest_port, src, src_port)
 
