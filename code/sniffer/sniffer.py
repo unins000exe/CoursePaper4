@@ -64,7 +64,7 @@ class IPPort:
         return self.p2p
 
 
-def main(conn):
+def sniff(conn):
     output = ''
     raw_data, addr = conn.recvfrom(65536)
     dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
