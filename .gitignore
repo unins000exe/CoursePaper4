@@ -17,3 +17,4 @@
 *.pygstyle
 *.pygtex
 code/sniffer/out.txt
+code/sniffer/ip_list.txt
