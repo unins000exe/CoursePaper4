@@ -1,0 +1,17 @@
+def find_p2p():
+    # 1 Заполнение p2p_addrs адресами,
+    # взаимодействующими одновременно по TCP и UDP с учётом исключений
+    inter = check_intersection()
+    for addr in inter:
+        if addr not in rejected and addr != UIP:
+            p2p_addrs.add(addr)
+
+    # 2 Заполнение p2p_addrs адресами, выбранными исходя из check_p2p с учётом исключений
+    for ipport in dict_ipport:
+        ipp = dict_ipport[ipport]
+        ip = ipp.dst_ip
+        port = ipp.dst_port
+        if ipp.check_p2p() and check_exceptions(ip, port) and ip != UIP:
+            p2p_addrs.add(ip)
+
+    return p2p_addrs
