@@ -133,8 +133,6 @@ def check_exceptions(src, dest, src_port, dest_port):
 
 
 def find_p2p():
-    global p2p_addrs_res
-
     # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP с учётом исключений
     inter = TCP_addrs & UDP_addrs
     for pair_addrs in inter:
