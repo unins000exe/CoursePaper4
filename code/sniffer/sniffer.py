@@ -6,17 +6,24 @@ import textwrap
 TAB_1 = '\t - '
 
 # Список пар порт-приложение
-LIST_P2P = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 6884: 'BitTorrent', 6885: 'BitTorrent',
-            6886: 'BitTorrent', 6887: 'BitTorrent', 6888: 'BitTorrent', 6889: 'BitTorrent', 6969: 'BitTorrent',
-            411: 'Direct Connect', 412: 'Direct Connect', 2323: 'eDonkey', 3306: 'eDonkey', 4242: 'eDonkey',
-            4500: 'eDonkey', 4501: 'eDonkey', 4677: 'eDonkey', 4678: 'eDonkey', 4711: 'eDonkey', 4712: 'eDonkey',
-            7778: 'eDonkey', 1214: 'FastTrack', 1215: 'FastTrack', 1331: 'FastTrack', 1337: 'FastTrack',
-            1683: 'FastTrack', 4329: 'FastTrack', 5000: 'Yahoo', 5001: 'Yahoo', 5002: 'Yahoo', 5003: 'Yahoo',
-            5004: 'Yahoo', 5005: 'Yahoo', 5006: 'Yahoo', 5007: 'Yahoo', 5008: 'Yahoo', 5009: 'Yahoo',
-            5010: 'Yahoo', 5050: 'Yahoo', 5100: 'Yahoo', 5555: 'Napster', 6257: 'Napster', 6666: 'Napster',
-            6677: 'Napster', 6688: 'Napster', 6699: 'Napster', 6700: 'Napster', 6701: 'Napster',
-            6346: 'Gnutella', 6347: 'Gnutella', 5190: 'AIM', 3478: 'Skype / Steam (voice chat)',
-            4379: 'Steam (voice chat)', 4380: 'Steam (voice chat)', 4899: 'Radmin VPN', 12975: 'Hamachi',
+LIST_P2P = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 
+            6884: 'BitTorrent', 6885: 'BitTorrent', 6886: 'BitTorrent', 
+            6887: 'BitTorrent', 6888: 'BitTorrent', 6889: 'BitTorrent', 
+            6969: 'BitTorrent', 411: 'Direct Connect', 412: 'Direct Connect',
+            2323: 'eDonkey', 3306: 'eDonkey', 4242: 'eDonkey',
+            4500: 'eDonkey', 4501: 'eDonkey', 4677: 'eDonkey',
+            4678: 'eDonkey', 4711: 'eDonkey', 4712: 'eDonkey',
+            7778: 'eDonkey', 1214: 'FastTrack', 1215: 'FastTrack', 
+            1331: 'FastTrack', 1337: 'FastTrack', 1683: 'FastTrack', 
+            4329: 'FastTrack', 5000: 'Yahoo', 5001: 'Yahoo', 
+            5002: 'Yahoo', 5003: 'Yahoo', 5004: 'Yahoo', 5005: 'Yahoo', 
+            5006: 'Yahoo', 5007: 'Yahoo', 5008: 'Yahoo', 5009: 'Yahoo',
+            5010: 'Yahoo', 5050: 'Yahoo', 5100: 'Yahoo', 5555: 'Napster', 
+            6257: 'Napster', 6666: 'Napster', 6677: 'Napster',
+            6688: 'Napster', 6699: 'Napster', 6700: 'Napster', 
+            6701: 'Napster', 6346: 'Gnutella', 6347: 'Gnutella', 5190: 'AIM',
+            3478: 'Skype / Steam (voice chat)', 4379: 'Steam (voice chat)',
+            4380: 'Steam (voice chat)', 4899: 'Radmin VPN', 12975: 'Hamachi',
             32976: 'Hamachi', 3479: 'Skype', 3480: 'Skype', 3481: 'Skype'}
 
 # Список портов исключений
@@ -133,14 +140,14 @@ def check_exceptions(src, dest, src_port, dest_port):
 
 
 def find_p2p():
-    # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP с учётом исключений
+    # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP
     inter = TCP_addrs & UDP_addrs
     for pair_addrs in inter:
         for ipport in rejected:
             if pair_addrs[0] != ipport[0] and pair_addrs[1] != ipport[0]:
                 p2p_addrs.add(pair_addrs)
 
-    # 2 Заполнение p2p_addrs адресами, выбранными исходя из check_p2p с учётом исключений
+    # 2 Заполнение p2p_pairs_ipp адресами, выбранными исходя из check_p2p
     for ipport in dict_ipport:
         ipp = dict_ipport[ipport]
         ipp.add_to_p2p_addrs1()  # Заполнение массива p2p_addrs1
