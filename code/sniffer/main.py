@@ -20,9 +20,6 @@ class Menu(tk.Frame):
         self.frame_out = ttk.LabelFrame(self, text='Вывод TCP/UDP трафика')
         self.frame_out.grid(row=0, column=0)
 
-        # self.label1 = ttk.Label(self, text='Вывод TCP/UDP трафика')
-        # self.label1.grid(row=0, column=0, pady=5)
-
         self.output = tk.Text(self.frame_out, width=70, height=35)
         self.output.grid(row=0, column=0, padx=(5, 0), sticky=tk.NW)
 
@@ -67,7 +64,7 @@ class Menu(tk.Frame):
         self.call_find_p2p()
 
     def call_sniff(self):
-        out = sniffer.sniff(conn)
+        out = sniffer.sniff(conn, os)
         if out:
             # Вывод времени
             time = str(datetime.now().strftime('%H:%M:%S')) + ":\n"
@@ -96,7 +93,8 @@ class Menu(tk.Frame):
             self.p2p_lb2.insert('end', addr[0] + ":" + str(addr[1]))
         for addrs in sniffer.p2p_addrs:
             self.p2p_lb3.insert('end', addrs[0] + " < = > " + addrs[1])
-        root.after(15000, self.call_find_p2p)  # обнаружение p2p методом анализирования потоков запускается каждые 15 секунд
+        root.after(15000,
+                   self.call_find_p2p)  # обнаружение p2p методом анализирования потоков запускается каждые 15 секунд
 
     def stop(self):
         file2.write('Список IP-адресов, взаимодействующих через P2P: \n')
@@ -109,30 +107,43 @@ class Menu(tk.Frame):
         for row in self.p2p_lb2.get(0, 'end'):
             file2.write(' * ' + row + '\n')
         file2.write('TCP/UDP-эвристика: \n')
-                for row in self.p2p_lb3.get(0, 'end'):
-                    file2.write(' * ' + row + '\n')
-                file2.write('Конец списка. \n')
+        for row in self.p2p_lb3.get(0, 'end'):
+            file2.write(' * ' + row + '\n')
+        file2.write('Конец списка. \n')
 
-                root.destroy()
+        root.destroy()
 
-interface = 'enp0s3'
-if len(sys.argv) > 1:
-    interface = sys.argv[1]
 
-ret = os.system("ip link set {} promisc on".format(interface))
+if __name__ == "__main__":
+    try:
+        if os.name == 'nt':
+            os = False
+            interface = '192.168.1.100'
+            conn = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+            conn.bind((interface, 0))
+            conn.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+            conn.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+        else:
+            os = True
+            interface = 'enp0s3'
+            if len(sys.argv) > 1:
+                interface = sys.argv[1]
+            ret = os.system("ip link set {} promisc on".format(interface))
+            conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
+            conn.bind((interface, 0))
+    except socket.error as msg:
+        print('Сокет не может быть создан. Код ошибки : ' + str(msg[0]) + ' Сообщение ' + msg[1])
+        sys.exit()
 
-conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
-conn.bind((interface, 0))
+    # В файл сохраняется последний вывод программы
+    file = open('out.txt', 'w+')
+    # Список IP-адресов, взаимодействующих через P2P
+    file2 = open('ip_list.txt', 'w+')
 
-# В файл сохраняется последний вывод программы
-file = open('out.txt', 'w+')
-# Список IP-адресов, взаимодействующих через P2P
-file2 = open('ip_list.txt', 'w+')
-
-root = tk.Tk()
-root.title("Анализатор сетевого трафика")
-menu = Menu(root)
-root.mainloop()
-file2.close()
-file.close()
-conn.close()
+    root = tk.Tk()
+    root.title("Анализатор сетевого трафика")
+    menu = Menu(root)
+    root.mainloop()
+    file2.close()
+    file.close()
+    conn.close()

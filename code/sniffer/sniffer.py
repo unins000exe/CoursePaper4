@@ -1,3 +1,4 @@
+import binascii
 import socket
 import struct
 import textwrap
@@ -71,14 +72,17 @@ class IPPort:
         return self.p2p
 
 
-def sniff(conn):
+def sniff(conn, os):
     output = ''
-    raw_data, addr = conn.recvfrom(65536)
-    dest_mac, src_mac, eth_proto, data = ethernet_frame(raw_data)
+    data, addr = conn.recvfrom(65536)
+    if os:
+        dest_mac, src_mac, eth_proto, data = ethernet_frame(data)
+    else:
+        eth_proto = 8
 
     # IPv4
     if eth_proto == 8:
-        (version, header_length, ttl, proto, src, dest, data) = ipv4_packet(data)
+        version, header_length, ttl, proto, src, dest, data = ipv4_packet(data)
 
         # TCP
         if proto == 6:
