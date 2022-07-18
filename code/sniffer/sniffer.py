@@ -1,43 +1,42 @@
-import binascii
 import socket
 import struct
-import textwrap
 
 # Отступы для вывода информации
 TAB_1 = '\t - '
 
 # Список пар порт-приложение
-LIST_P2P = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent', 
-            6884: 'BitTorrent', 6885: 'BitTorrent', 6886: 'BitTorrent', 
-            6887: 'BitTorrent', 6888: 'BitTorrent', 6889: 'BitTorrent', 
+LIST_P2P = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent',
+            6884: 'BitTorrent', 6885: 'BitTorrent', 6886: 'BitTorrent',
+            6887: 'BitTorrent', 6888: 'BitTorrent', 6889: 'BitTorrent',
             6969: 'BitTorrent', 411: 'Direct Connect', 412: 'Direct Connect',
             2323: 'eDonkey', 3306: 'eDonkey', 4242: 'eDonkey',
             4500: 'eDonkey', 4501: 'eDonkey', 4677: 'eDonkey',
             4678: 'eDonkey', 4711: 'eDonkey', 4712: 'eDonkey',
-            7778: 'eDonkey', 1214: 'FastTrack', 1215: 'FastTrack', 
-            1331: 'FastTrack', 1337: 'FastTrack', 1683: 'FastTrack', 
-            4329: 'FastTrack', 5000: 'Yahoo', 5001: 'Yahoo', 
-            5002: 'Yahoo', 5003: 'Yahoo', 5004: 'Yahoo', 5005: 'Yahoo', 
+            7778: 'eDonkey', 1214: 'FastTrack', 1215: 'FastTrack',
+            1331: 'FastTrack', 1337: 'FastTrack', 1683: 'FastTrack',
+            4329: 'FastTrack', 5000: 'Yahoo', 5001: 'Yahoo',
+            5002: 'Yahoo', 5003: 'Yahoo', 5004: 'Yahoo', 5005: 'Yahoo',
             5006: 'Yahoo', 5007: 'Yahoo', 5008: 'Yahoo', 5009: 'Yahoo',
-            5010: 'Yahoo', 5050: 'Yahoo', 5100: 'Yahoo', 5555: 'Napster', 
+            5010: 'Yahoo', 5050: 'Yahoo', 5100: 'Yahoo', 5555: 'Napster',
             6257: 'Napster', 6666: 'Napster', 6677: 'Napster',
-            6688: 'Napster', 6699: 'Napster', 6700: 'Napster', 
+            6688: 'Napster', 6699: 'Napster', 6700: 'Napster',
             6701: 'Napster', 6346: 'Gnutella', 6347: 'Gnutella', 5190: 'AIM',
             3478: 'Skype / Steam (voice chat)', 4379: 'Steam (voice chat)',
             4380: 'Steam (voice chat)', 4899: 'Radmin VPN', 12975: 'Hamachi',
             32976: 'Hamachi', 3479: 'Skype', 3480: 'Skype', 3481: 'Skype'}
 
 # Список портов исключений
-EXCEPTIONS = {137, 138, 139, 445, 53, 123, 500, 554, 7070, 6970, 1755, 5000, 5001, 6112, 6868, 6899, 6667, 7000, 7514}
+EXCEPTIONS = {137, 138, 139, 445, 53, 123, 500, 554, 1900, 7070,
+              6970, 1755, 5000, 5001, 6112, 6868, 6899, 6667, 7000, 7514,
+              20, 21, 3396, 66, 1521, 1526, 1524, 22, 23, 513, 543}
 
 TCP_addrs = set()
 UDP_addrs = set()
-p2p_addrs = set()
-p2p_addrs1 = set()
-p2p_pairs = set()
-p2p_pairs_p = set()
-p2p_pairs_ipp = set()
-rejected = set()  # адреса, не относящиеся к P2P
+p2p_addrs = set()  # адреса, взаимодействующие одновременно по TCP и UDP
+p2p_addrs1 = set()  # адреса, которые взаимодействовали с адресами из p2p_addrs1
+p2p_pairs_p = set()  # адреса, порт которых входит в список P2P-портов
+p2p_pairs_ipp = set()  # адреса, подходящие к IPPort эвристике
+rejected = set()  # адреса, не относящиеся к P2P (исключения)
 dict_ipport = dict()  # словарь вида (ip+port -> объект класса IPPort)
 
 
@@ -45,20 +44,22 @@ class IPPort:
     def __init__(self, dst_ip, dst_port):
         self.dst_ip = dst_ip
         self.dst_port = dst_port
-        self.IPSet = set()
-        self.PortSet = set()
+        self.IPSet = set()  # IP-адреса источников
+        self.PortSet = set()  # Порты источников
         self.p2p = False
 
-    def add(self, ip, port):
+    def add_sources(self, ip, port):
         self.IPSet.add(ip)
         self.PortSet.add(port)
 
+    # TODO: куда-то деть эти адреса, потому что они не выводятся в результат
     # Добавление в p2p_addrs1 адресов, которые взаимодействовали с адресами из p2p_addrs
     def add_to_p2p_addrs1(self):
         for addr in p2p_addrs:
             if addr in self.IPSet and addr not in rejected:
                 p2p_addrs1.add(addr)
 
+    # TODO: сделать один нормальный метод в классе, убрать find_p2p, не знаю
     # Проверка IP/Port-эвристики
     def check_p2p(self):
         dif = 2
@@ -92,7 +93,9 @@ def sniff(conn, os):
             output = [TAB_1, 'TCP: ', src, ':', str(src_port), ' -> ', dest,  ':',
                       str(dest_port),  ', ',  str(len(data)), ' Б']
 
-            save(True, src, dest, src_port, dest_port)
+            TCP_addrs.add((src, dest))
+            check_exceptions(src, dest, src_port, dest_port)
+            add_ipport(dest, dest_port, src, src_port)
             check_ports(src, dest, src_port, dest_port)
 
         # UDP
@@ -102,19 +105,12 @@ def sniff(conn, os):
             output = [TAB_1, 'UDP: ', src,  ':', str(src_port), ' -> ', dest,  ':',
                       str(dest_port),  ', ',  str(len(data)), ' Б']
 
+            UDP_addrs.add((src, dest))
+            check_exceptions(src, dest, src_port, dest_port)
+            add_ipport(dest, dest_port, src, src_port)
             check_ports(src, dest, src_port, dest_port)
-            save(False, src, dest, src_port, dest_port)
 
     return output
-
-
-def save(tcp, src, dest, src_port, dest_port):
-    if tcp:
-        TCP_addrs.add((src, dest))
-    else:
-        UDP_addrs.add((src, dest))
-    check_exceptions(src, dest, src_port, dest_port)
-    add_ipport(dest, dest_port, src, src_port)
 
 
 def check_ports(src, dest, src_port, dest_port):
@@ -128,10 +124,10 @@ def add_ipport(dest, dest_port, src, src_port):
     ipport = dest + ':' + str(dest_port)
     if ipport not in dict_ipport:
         x = IPPort(dest, dest_port)
-        x.add(src, src_port)
+        x.add_sources(src, src_port)
         dict_ipport[ipport] = x
     else:
-        dict_ipport[ipport].add(src, src_port)
+        dict_ipport[ipport].add_sources(src, src_port)
 
 
 # Добавление адресов с портами в список исключений
@@ -147,17 +143,25 @@ def find_p2p():
     # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP
     inter = TCP_addrs & UDP_addrs
     for pair_addrs in inter:
-        for ipport in rejected:
-            if pair_addrs[0] != ipport[0] and pair_addrs[1] != ipport[0]:
+        for rej_ipp in rejected:
+            if pair_addrs[0] != rej_ipp [0] and pair_addrs[1] != rej_ipp[0]:
                 p2p_addrs.add(pair_addrs)
 
     # 2 Заполнение p2p_pairs_ipp адресами, выбранными исходя из check_p2p
     for ipport in dict_ipport:
         ipp = dict_ipport[ipport]
-        ipp.add_to_p2p_addrs1()  # Заполнение массива p2p_addrs1
+        ipp.add_to_p2p_addrs1()
         ip = ipp.dst_ip
         port = ipp.dst_port
-        if ipp.check_p2p() and (ip, port) not in rejected:
+        dif = 2
+        # Если порт из списка исключений, то разница между IPSet и PortSet должна быть увеличена до 10
+        if port in EXCEPTIONS:
+            dif = 10
+        if (ip, port) not in rejected:
+            ipp.p2p = len(ipp.IPSet) > 2 and (len(ipp.IPSet) - len(ipp.PortSet) < dif)
+        else:
+            ipp.p2p = False
+        if ipp.p2p and (ip, port) not in rejected:
             p2p_pairs_ipp.add((ip, port))
 
 

@@ -128,7 +128,7 @@ if __name__ == "__main__":
             interface = 'enp0s3'
             if len(sys.argv) > 1:
                 interface = sys.argv[1]
-            ret = os.system("ip link set {} promisc on".format(interface))
+            os.system("ip link set {} promisc on".format(interface))  # ret =
             conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
             conn.bind((interface, 0))
     except socket.error as msg:
