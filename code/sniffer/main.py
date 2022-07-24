@@ -20,11 +20,27 @@ class Menu(tk.Frame):
         self.frame_out = ttk.LabelFrame(self, text='Вывод TCP/UDP трафика')
         self.frame_out.grid(row=0, column=0)
 
-        self.output = tk.Text(self.frame_out, width=70, height=35)
+        self.columns = ['1', '2', '3', '4', '5', '6']
+        self.output = ttk.Treeview(self, show='headings', columns=self.columns)
+        self.output.heading('1', text='Время')
+        self.output.heading('2', text='IP источника')
+        self.output.heading('3', text='Порт источника')
+        self.output.heading('4', text='IP назначения')
+        self.output.heading('5', text='Порт назначения')
+        self.output.heading('6', text='Протокол')
+
+        self.output.column('1', minwidth=0, width=75)
+        self.output.column('2', minwidth=0, width=125)
+        self.output.column('3', minwidth=0, width=125)
+        self.output.column('4', minwidth=0, width=125)
+        self.output.column('5', minwidth=0, width=125)
+        self.output.column('6', minwidth=0, width=75)
+
+
+        # self.output = tk.Text(self.frame_out, width=70, height=35)
         self.output.grid(row=0, column=0, padx=(5, 0), sticky=tk.NW)
 
         self.scroll_out = ttk.Scrollbar(self.frame_out, command=self.output.yview)
-        # self.scroll_out.grid(row=0, column=1, padx=(0, 15))
         self.output.config(yscrollcommand=self.scroll_out.set)
 
         self.frame = ttk.LabelFrame(self, text='Список адресов, взаимодействующих через P2P')
@@ -69,16 +85,18 @@ class Menu(tk.Frame):
             # Вывод времени
             time = str(datetime.now().strftime('%H:%M:%S')) + ":\n"
             if time != self.last_time:
-                self.output.insert('end', time)
+                # self.output.insert('end', time)
                 file.write(time)
             self.last_time = time
+            ins = [time, out[2], out[4], out[6], out[8], out[1]]
+            self.output.insert(parent='', index='end', values=ins)
 
             # Вывод информации о пакете
             for s in out:
                 file.write(s)
-                self.output.insert('end', s)
+                # self.output.insert('end', s)
             file.write('\n')
-            self.output.insert('end', '\n')
+            # self.output.insert('end', '\n')
 
         root.after(100, self.call_sniff)  # сканирование каждые 0.1 сек
 
@@ -91,18 +109,16 @@ class Menu(tk.Frame):
             self.p2p_lb.insert('end', addr[0] + ":" + str(addr[1]))
         for addr in sniffer.p2p_pairs_ipp:
             self.p2p_lb2.insert('end', addr[0] + ":" + str(addr[1]))
-        for addrs in sniffer.p2p_addrs:
-            self.p2p_lb3.insert('end', addrs[0] + " < = > " + addrs[1])
-        root.after(15000,
-                   self.call_find_p2p)  # обнаружение p2p методом анализирования потоков запускается каждые 15 секунд
+        for addr in sniffer.p2p_addrs:
+            # self.p2p_lb3.insert('end', addrs[0] + " < = > " + addrs[1])
+            self.p2p_lb3.insert('end', addr[0] + ":" + str(addr[1]))
+        root.after(15000, self.call_find_p2p)
 
     def stop(self):
         file2.write('Список IP-адресов, взаимодействующих через P2P: \n')
-
         file2.write('Анализ портов: \n')
         for row in self.p2p_lb.get(0, 'end'):
             file2.write(' * ' + row + '\n')
-
         file2.write('IP/Port-эвристика: \n')
         for row in self.p2p_lb2.get(0, 'end'):
             file2.write(' * ' + row + '\n')
