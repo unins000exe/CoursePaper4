@@ -122,6 +122,7 @@ def sniff(conn, os):
     return output
 
 
+# TODO: по-моему не все записи замечает
 def check_ports(src, dest, src_port, dest_port):
     if LIST_P2P.get(src_port, False):
         p2p_pairs_p.add((src, src_port))
@@ -214,10 +215,11 @@ def tcp_segment(data):
     flag_rst = (offset_reserved_flags & 4) >> 5
     flag_syn = (offset_reserved_flags & 2) >> 5
     flag_fin = offset_reserved_flags & 1
-    return src_port, dest_port, sequence, ack, \
+    return str(src_port), str(dest_port), sequence, ack, \
            flag_urg, flag_ack, flag_psh, flag_rst, flag_syn, flag_fin, data[offset:]
 
 
+# TODO: мб всё же в виде строки возвращать
 # Распаковка UDP сегмента
 def udp_segment(data):
     src_port, dest_port, size = struct.unpack('! H H 2x H', data[:8])

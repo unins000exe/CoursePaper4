@@ -29,24 +29,24 @@ class Menu(tk.Frame):
         self.output.heading('3', text='Назначение')
         self.output.heading('4', text='Протокол')
         self.output.heading('5', text='Длина')
-        self.output.heading('6', text='Инфо')
+        self.output.heading('6', text='Инфо') # TODO: не вмещается
 
         self.output.column('1', minwidth=0, width=55)
         self.output.column('2', minwidth=0, width=125)
         self.output.column('3', minwidth=0, width=125)
         self.output.column('4', minwidth=0, width=75)
         self.output.column('5', minwidth=0, width=50)
-        self.output.column('6', minwidth=0, width=100)
+        self.output.column('6', minwidth=0, width=150)
 
-        self.cur = db.cursor()
-        self.cur.execute("""CREATE TEMP TABLE Packets(
-                            time TEXT,
-                            src TEXT,
-                            dest TEXT,
-                            proto TEXT,
-                            len TEXT,
-                            info TEXT)""")
-        db.commit()
+        # self.cur = db.cursor()
+        # self.cur.execute("""CREATE TEMP TABLE Packets(
+        #                     time TEXT,
+        #                     src TEXT,
+        #                     dest TEXT,
+        #                     proto TEXT,
+        #                     len TEXT,
+        #                     info TEXT)""")
+        # db.commit()
 
         # self.output = tk.Text(self.frame_out, width=70, height=35)
         self.output.grid(row=0, column=0, padx=(5, 0), sticky=tk.NW)
@@ -102,8 +102,8 @@ class Menu(tk.Frame):
             ins = [time, out[2] + ':' + out[4], out[6] + ':' + out[8], out[1], out[10] + ' Б', '']
             self.output_list.append(ins)
             self.output.insert(parent='', index='end', values=ins)
-            self.cur.execute("INSERT INTO Packets VALUES(?, ?, ?, ?, ?, ?)", ins)
-            db.commit()
+            # self.cur.execute("INSERT INTO Packets VALUES(?, ?, ?, ?, ?, ?)", ins)
+            # db.commit()
 
             # Вывод информации о пакете
             for s in out:
@@ -124,15 +124,22 @@ class Menu(tk.Frame):
         for addr in sniffer.p2p_pairs_ipp:
             self.p2p_lb2.insert('end', addr[0] + ":" + str(addr[1]))
         for addr in sniffer.p2p_addrs:
-            # self.p2p_lb3.insert('end', addrs[0] + " < = > " + addrs[1])
             self.p2p_lb3.insert('end', addr[0] + ":" + str(addr[1]))
 
         for row in self.output.get_children():
-            cur_val = self.output.item(row, 'values')
-            print(cur_val)
-            print(cur_val[1].split(':'))
-            if tuple(cur_val[1].split(':')) in sniffer.p2p_pairs_p or tuple(cur_val[2].split(':')) in sniffer.p2p_pairs_p:
-                cur_val[5] = 'P2P ports\n'
+            cur_val = list(self.output.item(row, 'values'))
+            ip1, port1 = cur_val[1].split(':')
+            ip2, port2 = cur_val[2].split(':')
+            port1 = int(port1)
+            port2 = int(port2)
+            if (ip1, port1) in sniffer.p2p_pairs_p or (ip2, port2) in sniffer.p2p_pairs_p:
+                cur_val[5] += 'P2P-порты\n'
+                self.output.item(row, values=cur_val)
+            if (ip1, port1) in sniffer.p2p_pairs_ipp or (ip2, port2) in sniffer.p2p_pairs_ipp:
+                cur_val[5] += 'IP/Port-эвристика\n'
+                self.output.item(row, values=cur_val)
+            if (ip1, port1) in sniffer.p2p_addrs or (ip2, port2) in sniffer.p2p_addrs:
+                cur_val[5] += 'TCP/UDP-эвристика\n'
                 self.output.item(row, values=cur_val)
 
         root.after(15000, self.call_find_p2p)
@@ -179,7 +186,7 @@ if __name__ == "__main__":
     # Список IP-адресов, взаимодействующих через P2P
     file2 = open('ip_list.txt', 'w+')
 
-    db = sqlite3.connect('sniffer.db')
+    # db = sqlite3.connect('sniffer.db')
 
     root = tk.Tk()
     root.title("Анализатор сетевого трафика")
