@@ -6,6 +6,7 @@ import sniffer
 from datetime import datetime
 import os
 import sys
+import sqlite3
 
 TAB_2 = '\t * '
 
@@ -16,26 +17,36 @@ class Menu(tk.Frame):
         self.master = master
         self.grid(row=0, column=0, sticky=tk.NSEW)
         self.last_time = ''
+        self.output_list = []
 
         self.frame_out = ttk.LabelFrame(self, text='Вывод TCP/UDP трафика')
         self.frame_out.grid(row=0, column=0)
 
         self.columns = ['1', '2', '3', '4', '5', '6']
-        self.output = ttk.Treeview(self, show='headings', columns=self.columns)
+        self.output = ttk.Treeview(self, show='headings', columns=self.columns, height=25)
         self.output.heading('1', text='Время')
-        self.output.heading('2', text='IP источника')
-        self.output.heading('3', text='Порт источника')
-        self.output.heading('4', text='IP назначения')
-        self.output.heading('5', text='Порт назначения')
-        self.output.heading('6', text='Протокол')
+        self.output.heading('2', text='Источник')
+        self.output.heading('3', text='Назначение')
+        self.output.heading('4', text='Протокол')
+        self.output.heading('5', text='Длина')
+        self.output.heading('6', text='Инфо')
 
-        self.output.column('1', minwidth=0, width=75)
+        self.output.column('1', minwidth=0, width=55)
         self.output.column('2', minwidth=0, width=125)
         self.output.column('3', minwidth=0, width=125)
-        self.output.column('4', minwidth=0, width=125)
-        self.output.column('5', minwidth=0, width=125)
-        self.output.column('6', minwidth=0, width=75)
+        self.output.column('4', minwidth=0, width=75)
+        self.output.column('5', minwidth=0, width=50)
+        self.output.column('6', minwidth=0, width=100)
 
+        self.cur = db.cursor()
+        self.cur.execute("""CREATE TEMP TABLE Packets(
+                            time TEXT,
+                            src TEXT,
+                            dest TEXT,
+                            proto TEXT,
+                            len TEXT,
+                            info TEXT)""")
+        db.commit()
 
         # self.output = tk.Text(self.frame_out, width=70, height=35)
         self.output.grid(row=0, column=0, padx=(5, 0), sticky=tk.NW)
@@ -83,13 +94,16 @@ class Menu(tk.Frame):
         out = sniffer.sniff(conn, os)
         if out:
             # Вывод времени
-            time = str(datetime.now().strftime('%H:%M:%S')) + ":\n"
+            time = str(datetime.now().strftime('%H:%M:%S'))
             if time != self.last_time:
                 # self.output.insert('end', time)
                 file.write(time)
             self.last_time = time
-            ins = [time, out[2], out[4], out[6], out[8], out[1]]
+            ins = [time, out[2] + ':' + out[4], out[6] + ':' + out[8], out[1], out[10] + ' Б', '']
+            self.output_list.append(ins)
             self.output.insert(parent='', index='end', values=ins)
+            self.cur.execute("INSERT INTO Packets VALUES(?, ?, ?, ?, ?, ?)", ins)
+            db.commit()
 
             # Вывод информации о пакете
             for s in out:
@@ -112,6 +126,15 @@ class Menu(tk.Frame):
         for addr in sniffer.p2p_addrs:
             # self.p2p_lb3.insert('end', addrs[0] + " < = > " + addrs[1])
             self.p2p_lb3.insert('end', addr[0] + ":" + str(addr[1]))
+
+        for row in self.output.get_children():
+            cur_val = self.output.item(row, 'values')
+            print(cur_val)
+            print(cur_val[1].split(':'))
+            if tuple(cur_val[1].split(':')) in sniffer.p2p_pairs_p or tuple(cur_val[2].split(':')) in sniffer.p2p_pairs_p:
+                cur_val[5] = 'P2P ports\n'
+                self.output.item(row, values=cur_val)
+
         root.after(15000, self.call_find_p2p)
 
     def stop(self):
@@ -155,6 +178,8 @@ if __name__ == "__main__":
     file = open('out.txt', 'w+')
     # Список IP-адресов, взаимодействующих через P2P
     file2 = open('ip_list.txt', 'w+')
+
+    db = sqlite3.connect('sniffer.db')
 
     root = tk.Tk()
     root.title("Анализатор сетевого трафика")

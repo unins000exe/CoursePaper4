@@ -91,7 +91,7 @@ def sniff(conn, os):
             src_port, dest_port, sequence, ack, flag_urg, flag_ack, \
             flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(data)
 
-            output = [TAB_1, 'TCP: ', src, ':', str(src_port), ' -> ', dest,  ':',
+            output = [TAB_1, 'TCP', src, ':', str(src_port), ' -> ', dest,  ':',
                       str(dest_port),  ', ',  str(len(data)), ' Б']
 
             # TCP_addrs.add((src, dest))
@@ -107,7 +107,7 @@ def sniff(conn, os):
         elif proto == 17:
             src_port, dest_port, length, data = udp_segment(data)
 
-            output = [TAB_1, 'UDP: ', src,  ':', str(src_port), ' -> ', dest,  ':',
+            output = [TAB_1, 'UDP', src,  ':', str(src_port), ' -> ', dest,  ':',
                       str(dest_port),  ', ',  str(len(data)), ' Б']
 
             # UDP_addrs.add((src, dest))
