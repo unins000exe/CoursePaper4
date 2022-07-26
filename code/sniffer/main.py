@@ -38,17 +38,6 @@ class Menu(tk.Frame):
         self.output.column('5', minwidth=0, width=50)
         self.output.column('6', minwidth=0, width=150)
 
-        # self.cur = db.cursor()
-        # self.cur.execute("""CREATE TEMP TABLE Packets(
-        #                     time TEXT,
-        #                     src TEXT,
-        #                     dest TEXT,
-        #                     proto TEXT,
-        #                     len TEXT,
-        #                     info TEXT)""")
-        # db.commit()
-
-        # self.output = tk.Text(self.frame_out, width=70, height=35)
         self.output.grid(row=0, column=0, padx=(5, 0), sticky=tk.NW)
 
         self.scroll_out = ttk.Scrollbar(self.frame_out, command=self.output.yview)
@@ -78,7 +67,7 @@ class Menu(tk.Frame):
         self.label4 = ttk.Label(self.frame, text='TCP/UDP-эвристика')
         self.label4.grid(row=0, column=2, pady=5, sticky=tk.N)
 
-        self.p2p_lb3 = tk.Listbox(self.frame, width=30)
+        self.p2p_lb3 = tk.Listbox(self.frame, height=20)
         self.p2p_lb3.grid(row=1, column=2, sticky=tk.N)
 
         self.scroll_p2p_lb3 = ttk.Scrollbar(self.frame, command=self.output.yview)
@@ -102,8 +91,6 @@ class Menu(tk.Frame):
             ins = [time, out[2] + ':' + out[4], out[6] + ':' + out[8], out[1], out[10] + ' Б', '']
             self.output_list.append(ins)
             self.output.insert(parent='', index='end', values=ins)
-            # self.cur.execute("INSERT INTO Packets VALUES(?, ?, ?, ?, ?, ?)", ins)
-            # db.commit()
 
             # Вывод информации о пакете
             for s in out:
