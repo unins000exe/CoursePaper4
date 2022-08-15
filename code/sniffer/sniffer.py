@@ -52,13 +52,12 @@ class IPPort:
         self.IPSet.add(ip)
         self.PortSet.add(port)
 
-    # TODO: куда-то деть эти адреса, потому что они не выводятся в результат
     # Добавление в p2p_addrs1 адресов, которые взаимодействовали с адресами из p2p_addrs
     def add_to_p2p_addrs1(self):
-        pass
-        # for addr in p2p_addrs:
-        #     if addr in self.IPSet and addr not in rejected:
-        #         p2p_addrs1.add(addr)
+        for addr in p2p_addrs:
+            if addr[0] in self.IPSet and addr not in rejected:
+                # добавляю в p2p_addrs, чтобы относилось к одной эвристике, хотя по сути это p2p_addrs1
+                p2p_addrs.add(addr + ' (*)')
 
     # TODO: сделать один нормальный метод в классе, убрать find_p2p, не знаю
     # Проверка IP/Port-эвристики
@@ -77,6 +76,8 @@ class IPPort:
 def sniff(conn, os):
     output = ''
     data, addr = conn.recvfrom(65536)
+    if data is None:
+        print('jopa')
     if os:
         dest_mac, src_mac, eth_proto, data = ethernet_frame(data)
     else:
@@ -94,7 +95,6 @@ def sniff(conn, os):
             output = [TAB_1, 'TCP', src, ':', str(src_port), ' -> ', dest,  ':',
                       str(dest_port),  ', ',  str(len(data)), ' Б']
 
-            # TCP_addrs.add((src, dest))
             check_exceptions(src, dest, src_port, dest_port)
             if (src, src_port) not in rejected:
                 TCP_addrs.add((src, src_port))
@@ -110,7 +110,6 @@ def sniff(conn, os):
             output = [TAB_1, 'UDP', src,  ':', str(src_port), ' -> ', dest,  ':',
                       str(dest_port),  ', ',  str(len(data)), ' Б']
 
-            # UDP_addrs.add((src, dest))
             if (src, src_port) not in rejected:
                 UDP_addrs.add((src, src_port))
             if (dest, dest_port) not in rejected:

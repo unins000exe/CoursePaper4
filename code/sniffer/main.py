@@ -8,6 +8,7 @@ import os
 import sys
 import netifaces as ni
 import winreg as wr
+import select
 
 TAB_2 = '\t * '
 
@@ -39,7 +40,7 @@ class Menu(tk.Frame):
         for inter in inters_ips:
             self.list_of_interfaces.insert(parent='', index='end', values=[inter, inters_ips[inter]])
 
-        self.list_of_interfaces.bind('<Double-1>', self.click)
+        self.list_of_interfaces.bind('<Double-1>', self.start)
 
         self.frame_main = ttk.Frame(self)
 
@@ -69,6 +70,7 @@ class Menu(tk.Frame):
         self.label2 = ttk.Label(self.frame, text='Анализ портов')
 
         self.p2p_lb = tk.Listbox(self.frame, height=20)
+        self.p2p_lb.bind('<Double-1>', self.highlight)
 
         self.scroll_p2p_lb = ttk.Scrollbar(self.frame, command=self.output.yview)
         self.p2p_lb.config(yscrollcommand=self.scroll_p2p_lb.set)
@@ -89,7 +91,7 @@ class Menu(tk.Frame):
 
         self.stop_btn = ttk.Button(self.frame_main, text='Стоп', command=self.stop)
 
-    def click(self, _):
+    def start(self, _):
         select = self.list_of_interfaces.selection()[0]
         item = self.list_of_interfaces.item(select)
         interface = item['values'][1]
@@ -110,21 +112,31 @@ class Menu(tk.Frame):
         self.call_sniff()
         self.call_find_p2p()
 
-    def call_sniff(self):
-        out = sniffer.sniff(self.conn, self.osflag)
-        if out:
-            time = str(datetime.now().strftime('%H:%M:%S'))
-            if time != self.last_time:
-                file.write(time)
-            self.last_time = time
-            ins = [time, out[2], out[6], out[4] + ' -> ' + out[8], out[1], out[10] + ' Б', '']
-            self.output_list.append(ins)
-            self.output.insert(parent='', index='end', values=ins)
+    # def highlight(self, _):
+    #     select = self.p2p_lb.curselection()
+    #     ip = self.p2p_lb.get(select)
+    #     print(ip)
+    #     # TODO: должны выделяться строки с выбранным IP
 
-            # Вывод информации о пакете
-            for s in out:
-                file.write(s)
-            file.write('\n')
+    def call_sniff(self):
+        self.conn.setblocking(0)  # ?
+
+        ready = select.select([self.conn], [], [], 0.1)
+        if ready[0]:
+            out = sniffer.sniff(self.conn, self.osflag)
+            if out:
+                time = str(datetime.now().strftime('%H:%M:%S'))
+                if time != self.last_time:
+                    file.write(time)
+                self.last_time = time
+                ins = [time, out[2], out[6], out[4] + ' -> ' + out[8], out[1], out[10] + ' Б', '']
+                self.output_list.append(ins)
+                self.output.insert(parent='', index='end', values=ins)
+
+                # Вывод информации о пакете
+                for s in out:
+                    file.write(s)
+                file.write('\n')
 
         root.after(100, self.call_sniff)  # сканирование каждые 0.1 сек
 
@@ -167,6 +179,7 @@ def create_socket(interface):
             conn.bind((interface, 0))
             conn.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
             conn.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+            # conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         else:
             osflag = True
             interface = 'enp0s3'
@@ -181,6 +194,7 @@ def create_socket(interface):
         sys.exit()
 
 
+# Расшифровка названия интерфейса на Windows
 def get_connection_name_from_guid(iface_guids):
     iface_names = ['(unknown)' for i in range(len(iface_guids))]
     reg = wr.ConnectRegistry(None, wr.HKEY_LOCAL_MACHINE)
@@ -195,6 +209,7 @@ def get_connection_name_from_guid(iface_guids):
 
 
 if __name__ == "__main__":
+    # Получение списка интерфейсов и их IP
     x = ni.interfaces()
     interfaces = []
     ips = []
