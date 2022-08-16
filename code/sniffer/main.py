@@ -20,7 +20,7 @@ class Menu(tk.Frame):
         self.grid(row=0, column=0, sticky=tk.NSEW)
         self.last_time = ''
         self.output_list = []
-        self.conn = None  # ???
+        self.conn = None
         self.osflag = None
 
         self.frame_choose_interface = ttk.Frame(self, width=150, height=75)
@@ -112,15 +112,14 @@ class Menu(tk.Frame):
         self.call_sniff()
         self.call_find_p2p()
 
-    # def highlight(self, _):
-    #     select = self.p2p_lb.curselection()
-    #     ip = self.p2p_lb.get(select)
-    #     print(ip)
-    #     # TODO: должны выделяться строки с выбранным IP
+    def highlight(self, _):
+        select = self.p2p_lb.curselection()
+        ip = self.p2p_lb.get(select)
+        print(ip)
+
+        # TODO: должны выделяться строки с выбранным IP
 
     def call_sniff(self):
-        self.conn.setblocking(0)  # ?
-
         ready = select.select([self.conn], [], [], 0.1)
         if ready[0]:
             out = sniffer.sniff(self.conn, self.osflag)
@@ -168,6 +167,8 @@ class Menu(tk.Frame):
         file2.write('Конец списка. \n')
 
         self.conn.close()
+        file2.close()
+        file.close()
         root.destroy()
 
 
@@ -179,6 +180,7 @@ def create_socket(interface):
             conn.bind((interface, 0))
             conn.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
             conn.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+            conn.setblocking(False)
             # conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         else:
             osflag = True
@@ -188,6 +190,7 @@ def create_socket(interface):
             os.system("ip link set {} promisc on".format(interface))  # ret =
             conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
             conn.bind((interface, 0))
+            conn.setblocking(False)
         return conn, osflag
     except socket.error as msg:
         print('Сокет не может быть создан. Код ошибки : ' + str(msg[0]) + ' Сообщение ' + msg[1])
@@ -233,5 +236,3 @@ if __name__ == "__main__":
     root.title("Анализатор сетевого трафика")
     menu = Menu(root)
     root.mainloop()
-    file2.close()
-    file.close()

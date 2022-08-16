@@ -76,8 +76,6 @@ class IPPort:
 def sniff(conn, os):
     output = ''
     data, addr = conn.recvfrom(65536)
-    if data is None:
-        print('jopa')
     if os:
         dest_mac, src_mac, eth_proto, data = ethernet_frame(data)
     else:
@@ -92,8 +90,8 @@ def sniff(conn, os):
             src_port, dest_port, sequence, ack, flag_urg, flag_ack, \
             flag_psh, flag_rst, flag_syn, flag_fin, data = tcp_segment(data)
 
-            output = [TAB_1, 'TCP', src, ':', str(src_port), ' -> ', dest,  ':',
-                      str(dest_port),  ', ',  str(len(data)), ' Б']
+            output = [TAB_1, 'TCP ', src, ':', str(src_port), ' -> ', dest, ':',
+                      str(dest_port), ', ', str(len(data)), ' Б']
 
             check_exceptions(src, dest, src_port, dest_port)
             if (src, src_port) not in rejected:
@@ -107,8 +105,8 @@ def sniff(conn, os):
         elif proto == 17:
             src_port, dest_port, length, data = udp_segment(data)
 
-            output = [TAB_1, 'UDP', src,  ':', str(src_port), ' -> ', dest,  ':',
-                      str(dest_port),  ', ',  str(len(data)), ' Б']
+            output = [TAB_1, 'UDP ', src, ':', str(src_port), ' -> ', dest, ':',
+                      str(dest_port), ', ', str(len(data)), ' Б']
 
             if (src, src_port) not in rejected:
                 UDP_addrs.add((src, src_port))
@@ -150,15 +148,9 @@ def check_exceptions(src, dest, src_port, dest_port):
 
 def find_p2p():
     # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP
-    # TODO: переработать, поскольку особо не учитываются порты, только IP адреса
     inter = TCP_addrs & UDP_addrs
-    # for pair_addrs in inter:
-    #     for rej_ipp in rejected:
-    #         if pair_addrs[0] != rej_ipp[0] and pair_addrs[1] != rej_ipp[0]:
-    #             p2p_addrs.add(pair_addrs)
     for addr in inter:
         p2p_addrs.add(addr)
-
 
     # 2 Заполнение p2p_pairs_ipp адресами, выбранными исходя из check_p2p
     for ipport in dict_ipport:
