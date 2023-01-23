@@ -7,8 +7,9 @@ from datetime import datetime
 import os
 import sys
 import netifaces as ni
-import winreg as wr
+# import winreg as wr
 import select
+from getmac.getmac import _get_default_iface_linux
 
 TAB_2 = '\t * '
 
@@ -172,7 +173,7 @@ class Menu(tk.Frame):
         root.destroy()
 
 
-def create_socket(interface):
+def create_socket(interface, osflag):
     try:
         if os.name == 'nt':
             osflag = False
@@ -184,7 +185,9 @@ def create_socket(interface):
             # conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         else:
             osflag = True
-            interface = 'enp0s3'
+
+            from getmac.getmac import _get_default_iface_linux
+            interface = 'enp6s0'
             if len(sys.argv) > 1:
                 interface = sys.argv[1]
             os.system("ip link set {} promisc on".format(interface))  # ret =
@@ -213,19 +216,34 @@ def get_connection_name_from_guid(iface_guids):
 
 if __name__ == "__main__":
     # Получение списка интерфейсов и их IP
-    x = ni.interfaces()
     interfaces = []
     ips = []
-    for interface in x:
-        addr = ni.ifaddresses(interface)
-        try:
-            ip = addr[ni.AF_INET][0]['addr']
-            interfaces.append(interface)
-            ips.append(ip)
-        except:
-            pass
-    interfaces = get_connection_name_from_guid(interfaces)
+
+    if os.name == 'nt':
+        osflag = False
+        import winreg as wr
+
+        x = ni.interfaces()
+        for interface in x:
+            addr = ni.ifaddresses(interface)
+            try:
+                ip = addr[ni.AF_INET][0]['addr']
+                interfaces.append(interface)
+                ips.append(ip)
+            except:
+                pass
+        interfaces = get_connection_name_from_guid(interfaces)
+
+    else:
+        osflag = True
+
+
+    interfaces = ['enp6s0']
+    ips = ['192.168.1.132']
     inters_ips = dict(zip(interfaces, ips))
+
+    print(ni.ifaddresses(_get_default_iface_linux()).setdefault(ni.AF_INET)[0]['addr'])
+    print(ni.interfaces())
 
     # В файл сохраняется последний вывод программы
     file = open('out.txt', 'w+')
