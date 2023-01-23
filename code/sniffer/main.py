@@ -7,12 +7,12 @@ from datetime import datetime
 import os
 import sys
 import netifaces as ni
-# import winreg as wr
 import select
-from getmac.getmac import _get_default_iface_linux
 
 TAB_2 = '\t * '
 
+
+# TODO: Для интерфейса: кнопка пуск/пауза
 
 class Menu(tk.Frame):
     def __init__(self, master):
@@ -173,8 +173,9 @@ class Menu(tk.Frame):
         root.destroy()
 
 
-def create_socket(interface, osflag):
+def create_socket(interface):
     try:
+        # Windows needs IP ?
         if os.name == 'nt':
             osflag = False
             conn = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
@@ -183,11 +184,11 @@ def create_socket(interface, osflag):
             conn.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
             conn.setblocking(False)
             # conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        # Linux needs interface's name
         else:
             osflag = True
 
-            from getmac.getmac import _get_default_iface_linux
-            interface = 'enp6s0'
             if len(sys.argv) > 1:
                 interface = sys.argv[1]
             os.system("ip link set {} promisc on".format(interface))  # ret =
@@ -214,14 +215,50 @@ def get_connection_name_from_guid(iface_guids):
     return iface_names
 
 
+#  For Linux
+def get_local_interfaces():
+    import array
+    import struct
+    import fcntl
+    """ Returns a dictionary of name:ip key value pairs. """
+    MAX_BYTES = 4096
+    FILL_CHAR = b'\0'
+    SIOCGIFCONF = 0x8912
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    names = array.array('B', MAX_BYTES * FILL_CHAR)
+    names_address, names_length = names.buffer_info()
+    mutable_byte_buffer = struct.pack('iL', MAX_BYTES, names_address)
+    mutated_byte_buffer = fcntl.ioctl(sock.fileno(), SIOCGIFCONF, mutable_byte_buffer)
+    max_bytes_out, names_address_out = struct.unpack('iL', mutated_byte_buffer)
+    namestr = names.tobytes()
+    namestr[:max_bytes_out]
+    bytes_out = namestr[:max_bytes_out]
+    ip_dict = {}
+    for i in range(0, max_bytes_out, 40):
+        name = namestr[i: i + 16].split(FILL_CHAR, 1)[0]
+        name = name.decode('utf-8')
+        ip_bytes = namestr[i+20:i+24]
+        full_addr = []
+        for netaddr in ip_bytes:
+            if isinstance(netaddr, int):
+                full_addr.append(str(netaddr))
+            elif isinstance(netaddr, str):
+                full_addr.append(str(ord(netaddr)))
+        # ip_dict[name] = '.'.join(full_addr)
+        ip_dict['.'.join(full_addr)] = name # я сделал наоборот, потому что для линукса у меня нужно имя, а не айпи
+
+    return ip_dict
+
+
 if __name__ == "__main__":
     # Получение списка интерфейсов и их IP
-    interfaces = []
-    ips = []
 
     if os.name == 'nt':
         osflag = False
         import winreg as wr
+
+        interfaces = []
+        ips = []
 
         x = ni.interfaces()
         for interface in x:
@@ -233,17 +270,18 @@ if __name__ == "__main__":
             except:
                 pass
         interfaces = get_connection_name_from_guid(interfaces)
+        inters_ips = dict(zip(interfaces, ips))
 
     else:
         osflag = True
+        inters_ips = get_local_interfaces()
+
+        # interfaces = ['enp6s0']
+        # ips = ['192.168.1.132']
 
 
-    interfaces = ['enp6s0']
-    ips = ['192.168.1.132']
-    inters_ips = dict(zip(interfaces, ips))
-
-    print(ni.ifaddresses(_get_default_iface_linux()).setdefault(ni.AF_INET)[0]['addr'])
-    print(ni.interfaces())
+    # print(ni.ifaddresses(_get_default_iface_linux()).setdefault(ni.AF_INET)[0]['addr'])
+    # print(ni.interfaces())
 
     # В файл сохраняется последний вывод программы
     file = open('out.txt', 'w+')
