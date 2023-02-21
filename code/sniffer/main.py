@@ -10,9 +10,8 @@ import netifaces as ni
 import select
 
 TAB_2 = '\t * '
-
-
-# TODO: Для интерфейса: кнопка пуск/пауза
+SCAN_RATE_S = 0.1
+SCAN_RATE_MS = int(SCAN_RATE_S * 1000)
 
 class Menu(tk.Frame):
     def __init__(self, master):
@@ -55,12 +54,12 @@ class Menu(tk.Frame):
         self.output.heading('6', text='Длина')
         self.output.heading('7', text='Инфо')
 
-        self.output.column('1', minwidth=0, width=55)
-        self.output.column('2', minwidth=0, width=100)
-        self.output.column('3', minwidth=0, width=100)
+        self.output.column('1', minwidth=0, width=65)
+        self.output.column('2', minwidth=0, width=115)
+        self.output.column('3', minwidth=0, width=115)
         self.output.column('4', minwidth=0, width=125)
         self.output.column('5', minwidth=0, width=70)
-        self.output.column('6', minwidth=0, width=50)
+        self.output.column('6', minwidth=0, width=60)
         self.output.column('7', minwidth=0, width=150)
 
         self.scroll_out = ttk.Scrollbar(self.frame_main, command=self.output.yview)
@@ -76,6 +75,7 @@ class Menu(tk.Frame):
         self.scroll_p2p_lb = ttk.Scrollbar(self.frame, command=self.output.yview)
         self.p2p_lb.config(yscrollcommand=self.scroll_p2p_lb.set)
 
+
         self.label3 = ttk.Label(self.frame, text='IP/Port-эвристика')
 
         self.p2p_lb2 = tk.Listbox(self.frame, height=20)
@@ -89,6 +89,8 @@ class Menu(tk.Frame):
 
         self.scroll_p2p_lb3 = ttk.Scrollbar(self.frame, command=self.output.yview)
         self.p2p_lb3.config(yscrollcommand=self.scroll_p2p_lb.set)
+
+        # self.output.bind("<ButtonRelease-5>", self.auto_down_scroll)
 
         self.stop_btn = ttk.Button(self.frame_main, text='Стоп', command=self.stop)
 
@@ -114,14 +116,24 @@ class Menu(tk.Frame):
         self.call_find_p2p()
 
     def highlight(self, _):
-        select = self.p2p_lb.curselection()
-        ip = self.p2p_lb.get(select)
-        print(ip)
+        # select = self.p2p_lb.curselection()
+        # ip = self.p2p_lb.get(select)
+        # print(ip)
+        ip = '192.168.1.1'
+
 
         # TODO: должны выделяться строки с выбранным IP
 
+    # Авто пролистывание до последней строки при прокручивании колеса мыши вниз
+    def auto_down_scroll(self):
+        last_row = self.output.get_children()[-1]
+        last_row_bbox = self.output.bbox(last_row)
+
+        if len(last_row_bbox) > 0:
+            self.output.see(last_row)
+
     def call_sniff(self):
-        ready = select.select([self.conn], [], [], 0.1)
+        ready = select.select([self.conn], [], [], SCAN_RATE_S)
         if ready[0]:
             out = sniffer.sniff(self.conn, self.osflag)
             if out:
@@ -132,13 +144,14 @@ class Menu(tk.Frame):
                 ins = [time, out[2], out[6], out[4] + ' -> ' + out[8], out[1], out[10] + ' Б', '']
                 self.output_list.append(ins)
                 self.output.insert(parent='', index='end', values=ins)
+                self.auto_down_scroll()
 
                 # Вывод информации о пакете
                 for s in out:
                     file.write(s)
                 file.write('\n')
 
-        root.after(100, self.call_sniff)  # сканирование каждые 0.1 сек
+        root.after(SCAN_RATE_MS, self.call_sniff)  # сканирование каждые 0.1 сек
 
     def call_find_p2p(self):
         sniffer.find_p2p()
@@ -252,7 +265,6 @@ def get_local_interfaces():
 
 if __name__ == "__main__":
     # Получение списка интерфейсов и их IP
-
     if os.name == 'nt':
         osflag = False
         import winreg as wr
