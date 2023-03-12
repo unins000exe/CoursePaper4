@@ -55,12 +55,12 @@ class Menu(tk.Frame):
         self.output.heading('7', text='Инфо')
 
         self.output.column('1', minwidth=0, width=65)
-        self.output.column('2', minwidth=0, width=115)
-        self.output.column('3', minwidth=0, width=115)
+        self.output.column('2', minwidth=0, width=120)
+        self.output.column('3', minwidth=0, width=120)
         self.output.column('4', minwidth=0, width=125)
-        self.output.column('5', minwidth=0, width=70)
+        self.output.column('5', minwidth=0, width=80)
         self.output.column('6', minwidth=0, width=60)
-        self.output.column('7', minwidth=0, width=150)
+        self.output.column('7', minwidth=0, width=200)
 
         self.scroll_out = ttk.Scrollbar(self.frame_main, command=self.output.yview)
         self.output.config(yscrollcommand=self.scroll_out.set)
@@ -138,17 +138,15 @@ class Menu(tk.Frame):
             out = sniffer.sniff(self.conn, self.osflag)
             if out:
                 time = str(datetime.now().strftime('%H:%M:%S'))
-                if time != self.last_time:
-                    file.write(time)
-                self.last_time = time
-                ins = [time, out[2], out[6], out[4] + ' -> ' + out[8], out[1], out[10] + ' Б', '']
-                self.output_list.append(ins)
-                self.output.insert(parent='', index='end', values=ins)
+                # ins = [time, out[2], out[6], out[4] + ' -> ' + out[8], out[1], out[10] + ' Б', '']
+                out.insert(0, time)
+                self.output_list.append(out)
+                self.output.insert(parent='', index='end', values=out)
                 self.auto_down_scroll()
 
                 # Вывод информации о пакете
                 for s in out:
-                    file.write(s)
+                    file.write(s + ' ')
                 file.write('\n')
 
         root.after(SCAN_RATE_MS, self.call_sniff)  # сканирование каждые 0.1 сек
@@ -162,7 +160,7 @@ class Menu(tk.Frame):
             self.p2p_lb.insert('end', addr[0] + ":" + str(addr[1]))
         for addr in sniffer.p2p_pairs_ipp:
             self.p2p_lb2.insert('end', addr[0] + ":" + str(addr[1]))
-        for addr in sniffer.p2p_addrs:
+        for addr in sniffer.p2p_addrs_tu:
             self.p2p_lb3.insert('end', addr[0] + ":" + str(addr[1]))
 
         root.after(15000, self.call_find_p2p)
