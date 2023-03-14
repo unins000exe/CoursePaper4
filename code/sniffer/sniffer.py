@@ -43,6 +43,8 @@ p2p_pairs_ipp = set()  # адреса, подходящие к IPPort эврис
 rejected = set()  # адреса, не относящиеся к P2P (исключения)
 dict_ipport = dict()  # словарь вида (ip+port -> объект класса IPPort)
 
+bittorrent_addrs = set()  # адреса, относящиеся к BitTorrent
+
 
 class IPPort:
     def __init__(self, dst_ip, dst_port):
@@ -108,7 +110,7 @@ def sniff(conn, os):
                 output = [src, dest, str(src_port) + ' -> ' + str(dest_port), 'UDP', str(len(data)) + ' Б',
                           addition_info]
 
-            payload_analysis(data)
+            payload_analysis(src, dest, src_port, dest_port, data)
 
         return output
 
@@ -145,10 +147,15 @@ def check_exceptions(src, dest, src_port, dest_port):
         rejected.add((dest, dest_port))
 
 
-def payload_analysis(data):
+# Анализ полезной нагрузки пакетов,
+def payload_analysis(src, dest, src_port, dest_port, data):
+    # Для BitTorrent
     sdata = str(data)
-    if 'BitTorrent' in sdata or 'torrent' in sdata:
-        print(data)
+    if len(data) >= 20:
+        if 'BitTorrent protocol' in sdata[:50]:
+            bittorrent_addrs.add(((src, src_port), (dest, dest_port)))
+            print(bittorrent_addrs)
+
 
 def find_p2p():
     # print('Исключения', rejected)

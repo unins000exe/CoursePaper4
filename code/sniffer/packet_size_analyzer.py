@@ -24,5 +24,6 @@
 # print('Среднее значение', s / len(dict_sizes.keys()))
 
 s = '13426974546f7272656e742070726f746f636f6c'
+bt = b'\x01\x00\x0cy;L\xc7G\x05q\xa5\xcb\x008\x00\x00\x06\xd6$X\x13BitTorrent protocol\x00\x00\x00\x00\x00\x10\x00\x05\x81\x93}?5\xc5S\xcb\xf7\x1cPX&G!,\x8f\xd6\xd2\x10-UT2210-\xbec\xadR\xec\x1e\x94\xd0\x1aW@\x8b'
 sb = bytes.fromhex(s)
-print(sb)
+print(bt[:50])

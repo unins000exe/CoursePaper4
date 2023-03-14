@@ -58,39 +58,29 @@ class Menu(tk.Frame):
         self.output.column('2', minwidth=0, width=120)
         self.output.column('3', minwidth=0, width=120)
         self.output.column('4', minwidth=0, width=125)
-        self.output.column('5', minwidth=0, width=80)
+        self.output.column('5', minwidth=0, width=77)
         self.output.column('6', minwidth=0, width=60)
         self.output.column('7', minwidth=0, width=200)
 
+        # Таблицы P2P адресов
+        self.frame = ttk.Frame(self.frame_main)
+        self.p2p_table_1 = ttk.Treeview(self.frame, show='headings', columns=['1'], height=12)
+        self.p2p_table_2 = ttk.Treeview(self.frame, show='headings', columns=['2'], height=12)
+        self.p2p_table_3 = ttk.Treeview(self.frame, show='headings', columns=['3'], height=12)
+        self.p2p_table_4 = ttk.Treeview(self.frame, show='headings', columns=['4'], height=12)
+
+        self.p2p_table_1.heading('1', text='Анализ портов')
+        self.p2p_table_2.heading('2', text='IP/Port эвристика')
+        self.p2p_table_3.heading('3', text='TCP/UDP эвристика')
+        self.p2p_table_4.heading('4', text='По полезной нагрузке')
+
+        self.p2p_table_1.column('1', minwidth=0, width=175)
+        self.p2p_table_2.column('2', minwidth=0, width=175)
+        self.p2p_table_3.column('3', minwidth=0, width=175)
+        self.p2p_table_4.column('4', minwidth=0, width=175)
+
         self.scroll_out = ttk.Scrollbar(self.frame_main, command=self.output.yview)
         self.output.config(yscrollcommand=self.scroll_out.set)
-
-        self.frame = ttk.LabelFrame(self.frame_main, text='Список адресов, взаимодействующих через P2P')
-
-        self.label2 = ttk.Label(self.frame, text='Анализ портов')
-
-        self.p2p_lb = tk.Listbox(self.frame, height=20)
-        self.p2p_lb.bind('<Double-1>', self.highlight)
-
-        self.scroll_p2p_lb = ttk.Scrollbar(self.frame, command=self.output.yview)
-        self.p2p_lb.config(yscrollcommand=self.scroll_p2p_lb.set)
-
-
-        self.label3 = ttk.Label(self.frame, text='IP/Port-эвристика')
-
-        self.p2p_lb2 = tk.Listbox(self.frame, height=20)
-
-        self.scroll_p2p_lb2 = ttk.Scrollbar(self.frame, command=self.output.yview)
-        self.p2p_lb2.config(yscrollcommand=self.scroll_p2p_lb.set)
-
-        self.label4 = ttk.Label(self.frame, text='TCP/UDP-эвристика')
-
-        self.p2p_lb3 = tk.Listbox(self.frame, height=20)
-
-        self.scroll_p2p_lb3 = ttk.Scrollbar(self.frame, command=self.output.yview)
-        self.p2p_lb3.config(yscrollcommand=self.scroll_p2p_lb.set)
-
-        # self.output.bind("<ButtonRelease-5>", self.auto_down_scroll)
 
         self.stop_btn = ttk.Button(self.frame_main, text='Стоп', command=self.stop)
 
@@ -103,26 +93,17 @@ class Menu(tk.Frame):
 
         self.frame_main.grid(row=0, column=0)
         self.output.grid(row=0, column=0, padx=(5, 0), sticky=tk.NW)
+
         self.frame.grid(row=0, column=1)
-        self.label2.grid(row=0, column=0, pady=5, sticky=tk.N)
-        self.p2p_lb.grid(row=1, column=0, sticky=tk.N)
-        self.label3.grid(row=0, column=1, pady=5, sticky=tk.N)
-        self.p2p_lb2.grid(row=1, column=1, sticky=tk.N, padx=5)
-        self.label4.grid(row=0, column=2, pady=5, sticky=tk.N)
-        self.p2p_lb3.grid(row=1, column=2, sticky=tk.N)
+        self.p2p_table_1.grid(row=0, column=0, padx=(5, 0), sticky=tk.NE)
+        self.p2p_table_2.grid(row=0, column=1, padx=(0, 5), sticky=tk.NE)
+        self.p2p_table_3.grid(row=1, column=0, padx=(5, 0), sticky=tk.NE)
+        self.p2p_table_4.grid(row=1, column=1, padx=(0, 5), sticky=tk.NE)
+
         self.stop_btn.grid(row=1, column=0, pady=(10, 10))
 
         self.call_sniff()
         self.call_find_p2p()
-
-    def highlight(self, _):
-        # select = self.p2p_lb.curselection()
-        # ip = self.p2p_lb.get(select)
-        # print(ip)
-        ip = '192.168.1.1'
-
-
-        # TODO: должны выделяться строки с выбранным IP
 
     # Авто пролистывание до последней строки при прокручивании колеса мыши вниз
     def auto_down_scroll(self):
@@ -153,30 +134,56 @@ class Menu(tk.Frame):
 
     def call_find_p2p(self):
         sniffer.find_p2p()
-        self.p2p_lb.delete(0, 'end')
-        self.p2p_lb2.delete(0, 'end')
-        self.p2p_lb3.delete(0, 'end')
+
+        for item_id in self.p2p_table_1.get_children():
+            self.p2p_table_1.delete(item_id)
         for addr in sniffer.p2p_pairs_p:
-            self.p2p_lb.insert('end', addr[0] + ":" + str(addr[1]))
+            self.p2p_table_1.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
+
+        for item_id in self.p2p_table_2.get_children():
+            self.p2p_table_2.delete(item_id)
         for addr in sniffer.p2p_pairs_ipp:
-            self.p2p_lb2.insert('end', addr[0] + ":" + str(addr[1]))
+            self.p2p_table_2.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
+
+        for item_id in self.p2p_table_3.get_children():
+            self.p2p_table_3.delete(item_id)
         for addr in sniffer.p2p_addrs_tu:
-            self.p2p_lb3.insert('end', addr[0] + ":" + str(addr[1]))
+            self.p2p_table_3.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
+
+        # for item_id in self.p2p_table_4.get_children():
+        #     self.p2p_table_4.delete(item_id)
+        # for addr in sniffer.p2p_addrs_tu:
+        #     self.p2p_table_4.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
 
         root.after(15000, self.call_find_p2p)
 
     def stop(self):
         file2.write('Список IP-адресов, взаимодействующих через P2P: \n')
         file2.write('Анализ портов: \n')
-        for row in self.p2p_lb.get(0, 'end'):
-            file2.write(' * ' + row + '\n')
+        for row in self.p2p_table_1.get_children():
+            addr = self.p2p_table_1.item(row)['values'][0]
+            file2.write(' * ' + addr + '\n')
+
         file2.write('IP/Port-эвристика: \n')
-        for row in self.p2p_lb2.get(0, 'end'):
-            file2.write(' * ' + row + '\n')
+        for row in self.p2p_table_2.get_children():
+            addr = self.p2p_table_2.item(row)['values'][0]
+            file2.write(' * ' + addr + '\n')
+
         file2.write('TCP/UDP-эвристика: \n')
-        for row in self.p2p_lb3.get(0, 'end'):
-            file2.write(' * ' + row + '\n')
+        for row in self.p2p_table_3.get_children():
+            addr = self.p2p_table_3.item(row)['values'][0]
+            file2.write(' * ' + addr + '\n')
+
+        file2.write('По полезной нагрузке: \n')
+        for row in self.p2p_table_4.get_children():
+            addr = self.p2p_table_4.item(row)['values'][0]
+            file2.write(' * ' + addr + '\n')
+
         file2.write('Конец списка. \n')
+
+        file2.write('\nСписок исключений P2P-адресов: \n')
+        for pair in sniffer.rejected:
+            file2.write(' * ' + pair[0] + ':' + str(pair[1]) + '\n')
 
         self.conn.close()
         file2.close()
