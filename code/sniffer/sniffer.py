@@ -9,18 +9,18 @@ LIST_P2P = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent',
             6884: 'BitTorrent', 6885: 'BitTorrent', 6886: 'BitTorrent',
             6887: 'BitTorrent', 6888: 'BitTorrent', 6889: 'BitTorrent',
             6969: 'BitTorrent', 411: 'Direct Connect', 412: 'Direct Connect',
-            2323: 'eDonkey', 3306: 'eDonkey', 4242: 'eDonkey',
-            4500: 'eDonkey', 4501: 'eDonkey', 4677: 'eDonkey',
-            4678: 'eDonkey', 4711: 'eDonkey', 4712: 'eDonkey',
-            7778: 'eDonkey', 1214: 'FastTrack', 1215: 'FastTrack',
-            1331: 'FastTrack', 1337: 'FastTrack', 1683: 'FastTrack',
-            4329: 'FastTrack', 5000: 'Yahoo', 5001: 'Yahoo',
-            5002: 'Yahoo', 5003: 'Yahoo', 5004: 'Yahoo', 5005: 'Yahoo',
-            5006: 'Yahoo', 5007: 'Yahoo', 5008: 'Yahoo', 5009: 'Yahoo',
-            5010: 'Yahoo', 5050: 'Yahoo', 5100: 'Yahoo', 5555: 'Napster',
-            6257: 'Napster', 6666: 'Napster', 6677: 'Napster',
-            6688: 'Napster', 6699: 'Napster', 6700: 'Napster',
-            6701: 'Napster', 6346: 'Gnutella', 6347: 'Gnutella', 5190: 'AIM',
+            # 2323: 'eDonkey', 3306: 'eDonkey', 4242: 'eDonkey',
+            # 4500: 'eDonkey', 4501: 'eDonkey', 4677: 'eDonkey',
+            # 4678: 'eDonkey', 4711: 'eDonkey', 4712: 'eDonkey',
+            # 7778: 'eDonkey', 1214: 'FastTrack', 1215: 'FastTrack',
+            # 1331: 'FastTrack', 1337: 'FastTrack', 1683: 'FastTrack',
+            # 4329: 'FastTrack', 5000: 'Yahoo', 5001: 'Yahoo',
+            # 5002: 'Yahoo', 5003: 'Yahoo', 5004: 'Yahoo', 5005: 'Yahoo',
+            # 5006: 'Yahoo', 5007: 'Yahoo', 5008: 'Yahoo', 5009: 'Yahoo',
+            # 5010: 'Yahoo', 5050: 'Yahoo', 5100: 'Yahoo', 5555: 'Napster',
+            # 6257: 'Napster', 6666: 'Napster', 6677: 'Napster',
+            # 6688: 'Napster', 6699: 'Napster', 6700: 'Napster',
+            # 6701: 'Napster', 6346: 'Gnutella', 6347: 'Gnutella', 5190: 'AIM',
             3478: 'Skype', 3479: 'Skype', 3480: 'Skype', 3481: 'Skype',
             4379: 'Steam', 4380: 'Steam (voice chat)', 27014: 'Steam',
             27015: 'Steam', 27016: 'Steam', 27017: 'Steam', 27018: 'Steam',
@@ -125,6 +125,10 @@ def add_info(src, dest, src_port, dest_port):
     elif LIST_P2P.get(dest_port, False):
         p2p_pairs_p.add((dest, dest_port))
         addition_info = 'P2P ' + LIST_P2P[dest_port]
+    elif (src, src_port) in bittorrent_addrs:
+        addition_info = 'P2P BitTorrent'
+    elif (dest, dest_port) in bittorrent_addrs:
+        addition_info = 'P2P BitTorrent'
     return addition_info
 
 
@@ -152,9 +156,9 @@ def payload_analysis(src, dest, src_port, dest_port, data):
     # Для BitTorrent
     sdata = str(data)
     if len(data) >= 20:
-        if 'BitTorrent protocol' in sdata[:50]:
-            bittorrent_addrs.add(((src, src_port), (dest, dest_port)))
-            print(bittorrent_addrs)
+        if 'BitTorrent protocol' in sdata:
+            bittorrent_addrs.add((src, src_port))
+            bittorrent_addrs.add((dest, dest_port))
 
 
 def find_p2p():

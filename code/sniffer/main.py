@@ -13,6 +13,7 @@ TAB_2 = '\t * '
 SCAN_RATE_S = 0.1
 SCAN_RATE_MS = int(SCAN_RATE_S * 1000)
 
+
 class Menu(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
@@ -60,7 +61,7 @@ class Menu(tk.Frame):
         self.output.column('4', minwidth=0, width=125)
         self.output.column('5', minwidth=0, width=77)
         self.output.column('6', minwidth=0, width=60)
-        self.output.column('7', minwidth=0, width=200)
+        self.output.column('7', minwidth=0, width=180)
 
         # Таблицы P2P адресов
         self.frame = ttk.Frame(self.frame_main)
@@ -150,10 +151,10 @@ class Menu(tk.Frame):
         for addr in sniffer.p2p_addrs_tu:
             self.p2p_table_3.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
 
-        # for item_id in self.p2p_table_4.get_children():
-        #     self.p2p_table_4.delete(item_id)
-        # for addr in sniffer.p2p_addrs_tu:
-        #     self.p2p_table_4.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
+        for item_id in self.p2p_table_4.get_children():
+            self.p2p_table_4.delete(item_id)
+        for addr in sniffer.bittorrent_addrs:
+            self.p2p_table_4.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
 
         root.after(15000, self.call_find_p2p)
 
