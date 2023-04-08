@@ -60,10 +60,10 @@ class IPPort:
 
     # Добавление в p2p_addrs1 адресов, которые взаимодействовали с адресами из p2p_addrs_tu
     def add_to_p2p_addrs1(self):
-        for addr in p2p_addrs_tu:
-            if addr[0] in self.IPSet and addr not in rejected:
+        for ip in self.IPSet:
+            if ip not in [ipport[0] for ipport in rejected]:
                 # добавляю в p2p_addrs_tu, чтобы относилось к одной эвристике, хотя по сути это p2p_addrs1
-                p2p_addrs_tu.add(addr + ' (*)')
+                p2p_addrs_tu.add('(*) ' + ip)
 
 
 def sniff(conn, os):
@@ -87,9 +87,6 @@ def sniff(conn, os):
                 check_exceptions(src, dest, src_port, dest_port)
                 if (src, src_port) not in rejected and (dest, dest_port) not in rejected:
                     TCP_addrs.add((src, dest))
-                # if (dest, dest_port) not in rejected:
-                #     TCP_addrs.add((dest, dest_port))
-
 
                 add_ipport(dest, dest_port, src, src_port)
                 addition_info = add_info(src, dest, src_port, dest_port)
@@ -101,10 +98,6 @@ def sniff(conn, os):
                 src_port, dest_port, length, data = udp_segment(data)
 
                 check_exceptions(src, dest, src_port, dest_port)
-                # if (src, src_port) not in rejected:
-                #     UDP_addrs.add((src, src_port))
-                # if (dest, dest_port) not in rejected:
-                #     UDP_addrs.add((dest, dest_port))
                 if (src, src_port) not in rejected and (dest, dest_port) not in rejected:
                     UDP_addrs.add((src, dest))
 
@@ -165,7 +158,6 @@ def payload_analysis(src, dest, src_port, dest_port, data):
 
 
 def find_p2p():
-    # print('Исключения', rejected)
     # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP
     inter = TCP_addrs & UDP_addrs
     for addrs in inter:
@@ -176,11 +168,13 @@ def find_p2p():
     for ipport in dict_ipport:
         ipp = dict_ipport[ipport]
 
-        # Здесь вызывается функция, которая добавляет адреса, взаимодействующие с адресами из TCP/UDP пар
-        # ipp.add_to_p2p_addrs1()
-
         ip = ipp.dst_ip
         port = ipp.dst_port
+
+        # Добавление адресов, взаимодействующие с адресами из TCP/UDP пар
+        if ip in p2p_addrs_tu:
+            ipp.add_to_p2p_addrs1()
+
         compare_dif = 2
 
         # Если порт из известных p2p портов, то разница между IPSet и PortSet должна быть увеличена до 10
