@@ -52,7 +52,7 @@ class IPPort:
         self.dst_port = dst_port
         self.IPSet = set()  # IP-адреса источников
         self.PortSet = set()  # Порты источников
-        self.p2p = False # НЕ ИСПОЛЬЗУЕТСЯ
+        self.p2p = False  # НЕ ИСПОЛЬЗУЕТСЯ
 
     def add_sources(self, ip, port):
         self.IPSet.add(ip)
@@ -85,10 +85,11 @@ def sniff(conn, os):
                 src_port, dest_port, data = tcp_segment(data)
 
                 check_exceptions(src, dest, src_port, dest_port)
-                if (src, src_port) not in rejected:
-                    TCP_addrs.add((src, src_port))
-                if (dest, dest_port) not in rejected:
-                    TCP_addrs.add((dest, dest_port))
+                if (src, src_port) not in rejected and (dest, dest_port) not in rejected:
+                    TCP_addrs.add((src, dest))
+                # if (dest, dest_port) not in rejected:
+                #     TCP_addrs.add((dest, dest_port))
+
 
                 add_ipport(dest, dest_port, src, src_port)
                 addition_info = add_info(src, dest, src_port, dest_port)
@@ -100,10 +101,12 @@ def sniff(conn, os):
                 src_port, dest_port, length, data = udp_segment(data)
 
                 check_exceptions(src, dest, src_port, dest_port)
-                if (src, src_port) not in rejected:
-                    UDP_addrs.add((src, src_port))
-                if (dest, dest_port) not in rejected:
-                    UDP_addrs.add((dest, dest_port))
+                # if (src, src_port) not in rejected:
+                #     UDP_addrs.add((src, src_port))
+                # if (dest, dest_port) not in rejected:
+                #     UDP_addrs.add((dest, dest_port))
+                if (src, src_port) not in rejected and (dest, dest_port) not in rejected:
+                    UDP_addrs.add((src, dest))
 
                 add_ipport(dest, dest_port, src, src_port)
                 addition_info = add_info(src, dest, src_port, dest_port)
@@ -165,15 +168,16 @@ def find_p2p():
     # print('Исключения', rejected)
     # 1 Заполнение p2p_addrs адресами, взаимодействующими одновременно по TCP и UDP
     inter = TCP_addrs & UDP_addrs
-    for addr in inter:
-        p2p_addrs_tu.add(addr)
+    for addrs in inter:
+        p2p_addrs_tu.add(addrs[0])
+        p2p_addrs_tu.add(addrs[1])
 
     # 2 Заполнение p2p_pairs_ipp адресами, выбранными исходя из check_p2p
     for ipport in dict_ipport:
         ipp = dict_ipport[ipport]
 
         # Здесь вызывается функция, которая добавляет адреса, взаимодействующие с адресами из TCP/UDP пар
-        ipp.add_to_p2p_addrs1()
+        # ipp.add_to_p2p_addrs1()
 
         ip = ipp.dst_ip
         port = ipp.dst_port

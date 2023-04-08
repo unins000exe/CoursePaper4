@@ -34,8 +34,8 @@ class Menu(tk.Frame):
         self.loi_columns = ['1', '2']
         self.list_of_interfaces = ttk.Treeview(self.frame_choose_interface,
                                                show='headings', columns=self.loi_columns, height=10)
-        self.list_of_interfaces.heading('1', text='Интерфейс')
-        self.list_of_interfaces.heading('2', text='IP-адрес')
+        self.list_of_interfaces.heading('1', text='IP-адрес')
+        self.list_of_interfaces.heading('2', text='Интерфейс')
         self.list_of_interfaces.grid(row=1, column=0)
 
         for inter in inters_ips:
@@ -62,6 +62,8 @@ class Menu(tk.Frame):
         self.output.column('5', minwidth=0, width=77)
         self.output.column('6', minwidth=0, width=60)
         self.output.column('7', minwidth=0, width=180)
+
+        self.output.tag_configure("highlight", background="#FCA89F")
 
         # Таблицы P2P адресов
         self.frame = ttk.Frame(self.frame_main)
@@ -120,10 +122,14 @@ class Menu(tk.Frame):
             out = sniffer.sniff(self.conn, self.osflag)
             if out:
                 time = str(datetime.now().strftime('%H:%M:%S'))
-                # ins = [time, out[2], out[6], out[4] + ' -> ' + out[8], out[1], out[10] + ' Б', '']
                 out.insert(0, time)
                 self.output_list.append(out)
                 self.output.insert(parent='', index='end', values=out)
+                # Подсветка
+                # if out[-1][0:3] == "P2P":
+                #     self.output.insert(parent='', index='end', values=out, tags=("highlight",))
+                # else:
+                #     self.output.insert(parent='', index='end', values=out)
                 self.auto_down_scroll()
 
                 # Вывод информации о пакете
@@ -149,7 +155,7 @@ class Menu(tk.Frame):
         for item_id in self.p2p_table_3.get_children():
             self.p2p_table_3.delete(item_id)
         for addr in sniffer.p2p_addrs_tu:
-            self.p2p_table_3.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
+            self.p2p_table_3.insert(parent='', index='end', values=[addr])
 
         for item_id in self.p2p_table_4.get_children():
             self.p2p_table_4.delete(item_id)
