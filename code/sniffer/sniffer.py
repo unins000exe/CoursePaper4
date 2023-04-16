@@ -44,6 +44,12 @@ rejected = set()  # адреса, не относящиеся к P2P (исклю
 dict_ipport = dict()  # словарь вида (ip+port -> объект класса IPPort)
 
 bittorrent_addrs = set()  # адреса, относящиеся к BitTorrent
+bitcoin_addrs = set()  # адреса, относящиеся к Bitcoin
+bitcoin_phrases = ['version', 'verack', 'addr', 'inv', 'getdata', 'notfound', 'getblocks',
+                   'getheaders', 'tx', 'block', 'headers', 'getaddr', 'mempool', 'checkorder',
+                   'submitorder', 'reply', 'ping', 'pong', 'reject', 'filterload', 'filteradd',
+                   'filterclear', 'merkleblock', 'alert', 'sendheaders', 'feefilter',
+                   'sendcmpct', 'cmpctlblock', 'getblocktxn', 'blocktxn', 'Satoshi']
 
 
 class IPPort:
@@ -125,6 +131,10 @@ def add_info(src, dest, src_port, dest_port):
         addition_info = 'P2P BitTorrent'
     elif (dest, dest_port) in bittorrent_addrs:
         addition_info = 'P2P BitTorrent'
+    elif (src, src_port) in bitcoin_addrs:
+        addition_info = 'P2P Bitcoin'
+    elif (dest, dest_port) in bitcoin_addrs:
+        addition_info = 'P2P Bitcoin'
     return addition_info
 
 
@@ -151,10 +161,16 @@ def check_exceptions(src, dest, src_port, dest_port):
 def payload_analysis(src, dest, src_port, dest_port, data):
     # Для BitTorrent
     sdata = str(data)
-    if len(data) >= 20:
-        if 'BitTorrent protocol' in sdata:
-            bittorrent_addrs.add((src, src_port))
-            bittorrent_addrs.add((dest, dest_port))
+    if len(data) >= 20 and 'BitTorrent protocol' in sdata:
+        bittorrent_addrs.add((src, src_port))
+        bittorrent_addrs.add((dest, dest_port))
+    elif src_port == 8333 or dest_port == 8333:
+        # print(sdata)
+        for word in bitcoin_phrases:
+            if word in sdata:
+                bitcoin_addrs.add((src, src_port))
+                bitcoin_addrs.add((dest, dest_port))
+                break
 
 
 def find_p2p():
@@ -227,7 +243,7 @@ def tcp_segment(data):
     flag_rst = (offset_reserved_flags & 4) >> 5
     flag_syn = (offset_reserved_flags & 2) >> 5
     flag_fin = offset_reserved_flags & 1
-    return str(src_port), str(dest_port), data[offset:]
+    return src_port, dest_port, data[offset:]
 
 
 # Распаковка UDP сегмента

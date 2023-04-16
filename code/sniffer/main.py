@@ -161,6 +161,8 @@ class Menu(tk.Frame):
             self.p2p_table_4.delete(item_id)
         for addr in sniffer.bittorrent_addrs:
             self.p2p_table_4.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
+        for addr in sniffer.bitcoin_addrs:
+            self.p2p_table_4.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
 
         root.after(15000, self.call_find_p2p)
 
