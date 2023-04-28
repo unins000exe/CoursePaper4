@@ -10,7 +10,7 @@ import netifaces as ni
 import select
 
 TAB_2 = '\t * '
-SCAN_RATE_S = 0.1
+SCAN_RATE_S = 0.075
 SCAN_RATE_MS = int(SCAN_RATE_S * 1000)
 
 

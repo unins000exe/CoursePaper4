@@ -37,7 +37,6 @@ EXCEPTIONS = {137, 138, 139, 445, 53, 123, 500, 554, 1900, 7070,
 TCP_addrs = set()
 UDP_addrs = set()
 p2p_addrs_tu = set()  # адреса, взаимодействующие одновременно по TCP и UDP
-p2p_addrs1 = set()  # НЕ ИСПОЛЬЗУЕТСЯ! адреса, которые взаимодействовали с адресами из p2p_addrs1
 p2p_pairs_p = set()  # адреса, порт которых входит в список P2P-портов
 p2p_pairs_ipp = set()  # адреса, подходящие к IPPort эвристике
 rejected = set()  # адреса, не относящиеся к P2P (исключения)
@@ -146,7 +145,6 @@ def add_ipport(dest, dest_port, src, src_port):
         dict_ipport[ipport] = x
     else:
         dict_ipport[ipport].add_sources(src, src_port)
-
 
 # Добавление адресов с портами в список исключений
 def check_exceptions(src, dest, src_port, dest_port):
