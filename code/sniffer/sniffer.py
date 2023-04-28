@@ -32,7 +32,7 @@ LIST_P2P = {6881: 'BitTorrent', 6882: 'BitTorrent', 6883: 'BitTorrent',
 # Список портов исключений
 EXCEPTIONS = {137, 138, 139, 445, 53, 123, 500, 554, 1900, 7070,
               6970, 1755, 5000, 5001, 6112, 6868, 6899, 6667, 7000, 7514,
-              20, 21, 3396, 66, 1521, 1526, 1524, 22, 23, 513, 543}
+              20, 21, 3396, 66, 1521, 1526, 1524, 22, 23, 25, 513, 543}
 
 TCP_addrs = set()
 UDP_addrs = set()
@@ -159,16 +159,17 @@ def check_exceptions(src, dest, src_port, dest_port):
 def payload_analysis(src, dest, src_port, dest_port, data):
     # Для BitTorrent
     sdata = str(data)
-    if len(data) >= 20 and 'BitTorrent protocol' in sdata:
-        bittorrent_addrs.add((src, src_port))
-        bittorrent_addrs.add((dest, dest_port))
-    elif src_port == 8333 or dest_port == 8333:
-        # print(sdata)
-        for word in bitcoin_phrases:
-            if word in sdata:
-                bitcoin_addrs.add((src, src_port))
-                bitcoin_addrs.add((dest, dest_port))
-                break
+    if len(data) >= 20 
+        if 'BitTorrent protocol' in sdata:
+            bittorrent_addrs.add((src, src_port))
+            bittorrent_addrs.add((dest, dest_port))
+        elif src_port == 8333 or dest_port == 8333 or src_port == 8334 or dest_port == 8334:
+            # print(sdata)
+            for word in bitcoin_phrases:
+                if word in sdata:
+                    bitcoin_addrs.add((src, src_port))
+                    bitcoin_addrs.add((dest, dest_port))
+                    break
 
 
 def find_p2p():
