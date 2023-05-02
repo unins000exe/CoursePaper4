@@ -107,6 +107,7 @@ class Menu(tk.Frame):
 
         self.call_sniff()
         self.call_find_p2p()
+        self.call_bt_stats()
 
     # Авто пролистывание до последней строки при прокручивании колеса мыши вниз
     def auto_down_scroll(self):
@@ -165,6 +166,15 @@ class Menu(tk.Frame):
             self.p2p_table_4.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
 
         root.after(15000, self.call_find_p2p)
+
+    def call_bt_stats(self):
+        for ipp in sniffer.dict_ipport:
+            c, at, bi, rc = sniffer.dict_ipport[ipp].bt_stats()
+            if c > 0 and at > 0:
+                print(ipp)
+                print(c, at, bi, rc)
+
+        root.after(30000, self.call_bt_stats)
 
     def stop(self):
         file2.write('Список IP-адресов, взаимодействующих через P2P: \n')

@@ -57,11 +57,25 @@ class IPPort:
         self.dst_port = dst_port
         self.IPSet = set()  # IP-адреса источников
         self.PortSet = set()  # Порты источников
+        self.srcs = set()
+        self.in_packets = dict()
+        self.dest_addrs = set()
+        self.old_bi = set()
         self.p2p = False  # НЕ ИСПОЛЬЗУЕТСЯ
 
     def add_sources(self, ip, port):
         self.IPSet.add(ip)
         self.PortSet.add(port)
+        self.srcs.add((ip, port))
+
+    def add_packets(self, src_addr, size):
+        if src_addr in self.in_packets.keys():
+            self.in_packets[src_addr].append(size)
+        else:
+            self.in_packets[src_addr] = [size]
+
+    def add_out_addrs(self, dest_addr):
+        self.dest_addrs.add(dest_addr)
 
     # Добавление в p2p_addrs1 адресов, которые взаимодействовали с адресами из p2p_addrs_tu
     def add_to_p2p_addrs1(self):
@@ -70,6 +84,37 @@ class IPPort:
                 # добавляю в p2p_addrs_tu, чтобы относилось к одной эвристике, хотя по сути это p2p_addrs1
                 p2p_addrs_tu.add('(*) ' + ip)
 
+    def bt_stats(self):
+        # 1
+        c = len(self.srcs)
+        self.srcs = set()
+
+        # 2
+        at = 0
+        for addr in self.in_packets:
+            packets = self.in_packets[addr]
+            pack_size = len(packets)
+            if pack_size > 4:
+                average_size = 0
+                for p in packets:
+                    average_size += p
+                average_size /= pack_size
+                # 1250 или больше поставить?
+                if average_size > 1250:
+                    at += 1
+
+        # 3
+        bi = self.in_packets.keys() & self.dest_addrs
+
+        # 4
+        if len(bi) > len(self.old_bi):
+            rc = len(bi - self.old_bi)
+        else:
+            rc = len(self.old_bi - bi)
+
+        self.old_bi = bi
+
+        return c, at, len(bi), rc
 
 def sniff(conn, os):
     output = ''
@@ -93,7 +138,6 @@ def sniff(conn, os):
                 if (src, src_port) not in rejected and (dest, dest_port) not in rejected:
                     TCP_addrs.add((src, dest))
 
-                add_ipport(dest, dest_port, src, src_port)
                 addition_info = add_info(src, dest, src_port, dest_port)
                 output = [src, dest, str(src_port) + ' -> ' + str(dest_port), 'TCP', str(len(data)) + ' Б',
                           addition_info]
@@ -106,18 +150,19 @@ def sniff(conn, os):
                 if (src, src_port) not in rejected and (dest, dest_port) not in rejected:
                     UDP_addrs.add((src, dest))
 
-                add_ipport(dest, dest_port, src, src_port)
                 addition_info = add_info(src, dest, src_port, dest_port)
                 output = [src, dest, str(src_port) + ' -> ' + str(dest_port), 'UDP', str(len(data)) + ' Б',
                           addition_info]
 
+            add_ipport(dest, dest_port, src, src_port, len(data))
             payload_analysis(src, dest, src_port, dest_port, data)
 
         return output
 
 
-# Раньше была функция check_ports, теперь после проверки портов функция
-# добавляет к строке вывода информацию для столбца info, если адрес p2p и добавляет протокол по возможности
+# после проверки портов функция
+# добавляет к строке вывода информацию для столбца info,
+# если адрес p2p и добавляет протокол по возможности
 def add_info(src, dest, src_port, dest_port):
     addition_info = ''
     if LIST_P2P.get(src_port, False):
@@ -137,14 +182,21 @@ def add_info(src, dest, src_port, dest_port):
     return addition_info
 
 
-def add_ipport(dest, dest_port, src, src_port):
+def add_ipport(dest, dest_port, src, src_port, size):
     ipport = dest + ':' + str(dest_port)
     if ipport not in dict_ipport:
         x = IPPort(dest, dest_port)
         x.add_sources(src, src_port)
         dict_ipport[ipport] = x
+        x.add_packets(src + ':' + str(src_port), size)
     else:
         dict_ipport[ipport].add_sources(src, src_port)
+        dict_ipport[ipport].add_packets(src + ':' + str(src_port), size)
+
+    ipport_src = src + ':' + str(src_port)
+    if ipport_src in dict_ipport:
+        dict_ipport[ipport_src].add_out_addrs(ipport)
+
 
 # Добавление адресов с портами в список исключений
 def check_exceptions(src, dest, src_port, dest_port):
@@ -159,7 +211,7 @@ def check_exceptions(src, dest, src_port, dest_port):
 def payload_analysis(src, dest, src_port, dest_port, data):
     # Для BitTorrent
     sdata = str(data)
-    if len(data) >= 20 
+    if len(data) >= 20:
         if 'BitTorrent protocol' in sdata:
             bittorrent_addrs.add((src, src_port))
             bittorrent_addrs.add((dest, dest_port))
@@ -192,7 +244,7 @@ def find_p2p():
 
         compare_dif = 2
 
-        # Если порт из известных p2p портов, то разница между IPSet и PortSet должна быть увеличена до 10
+        # Если порт из известных p2p портов, то разница должна быть увеличена до 10
         if ipport in p2p_pairs_p:
             compare_dif = 10
 
@@ -234,14 +286,14 @@ def ipv4(addr):
 
 # Распаковка TCP сегмента
 def tcp_segment(data):
-    (src_port, dest_port, sequence, ack, offset_reserved_flags) = struct.unpack('! H H L L H', data[:14])
+    (src_port, dest_port, _, _, offset_reserved_flags) = struct.unpack('! H H L L H', data[:14])
     offset = (offset_reserved_flags >> 12) * 4
-    flag_urg = (offset_reserved_flags & 32) >> 5
-    flag_ack = (offset_reserved_flags & 16) >> 5
-    flag_psh = (offset_reserved_flags & 8) >> 5
-    flag_rst = (offset_reserved_flags & 4) >> 5
-    flag_syn = (offset_reserved_flags & 2) >> 5
-    flag_fin = offset_reserved_flags & 1
+    # flag_urg = (offset_reserved_flags & 32) >> 5
+    # flag_ack = (offset_reserved_flags & 16) >> 5
+    # flag_psh = (offset_reserved_flags & 8) >> 5
+    # flag_rst = (offset_reserved_flags & 4) >> 5
+    # flag_syn = (offset_reserved_flags & 2) >> 5
+    # flag_fin = offset_reserved_flags & 1
     return src_port, dest_port, data[offset:]
 
 
