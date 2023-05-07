@@ -172,7 +172,7 @@ class Menu(tk.Frame):
             c, at, bi, rc = sniffer.dict_ipport[ipp].bt_stats()
             if c > 0 and at > 0:
                 print(ipp)
-                print(c, at, bi, rc)
+                print('C = {}, AT / C = {}, BI = {}, RC / AT = {}'.format(c, at / c, bi, rc / at))
 
         root.after(30000, self.call_bt_stats)
 

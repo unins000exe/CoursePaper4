@@ -61,6 +61,7 @@ class IPPort:
         self.in_packets = dict()
         self.dest_addrs = set()
         self.old_bi = set()
+        self.rc = 0
         self.p2p = False  # НЕ ИСПОЛЬЗУЕТСЯ
 
     def add_sources(self, ip, port):
@@ -107,14 +108,16 @@ class IPPort:
         bi = self.in_packets.keys() & self.dest_addrs
 
         # 4
+        # self.rc = 0  # ?
         if len(bi) > len(self.old_bi):
-            rc = len(bi - self.old_bi)
+            self.rc += len(bi - self.old_bi)
         else:
-            rc = len(self.old_bi - bi)
+            self.rc += len(self.old_bi - bi)
 
         self.old_bi = bi
 
-        return c, at, len(bi), rc
+        return c, at, len(bi), self.rc
+
 
 def sniff(conn, os):
     output = ''
