@@ -46,7 +46,7 @@ class Menu(tk.Frame):
         self.frame_main = ttk.Frame(self)
 
         self.columns = ['1', '2', '3', '4', '5', '6', '7']
-        self.output = ttk.Treeview(self.frame_main, show='headings', columns=self.columns, height=25)
+        self.output = ttk.Treeview(self.frame_main, show='headings', columns=self.columns, height=38)
         self.output.heading('1', text='Время')
         self.output.heading('2', text='Источник')
         self.output.heading('3', text='Назначение')
@@ -71,16 +71,22 @@ class Menu(tk.Frame):
         self.p2p_table_2 = ttk.Treeview(self.frame, show='headings', columns=['2'], height=12)
         self.p2p_table_3 = ttk.Treeview(self.frame, show='headings', columns=['3'], height=12)
         self.p2p_table_4 = ttk.Treeview(self.frame, show='headings', columns=['4'], height=12)
+        self.p2p_table_5 = ttk.Treeview(self.frame, show='headings', columns=['5'], height=12)
+        self.p2p_table_6 = ttk.Treeview(self.frame, show='headings', columns=['6'], height=12)
 
         self.p2p_table_1.heading('1', text='Анализ портов')
         self.p2p_table_2.heading('2', text='IP/Port эвристика')
         self.p2p_table_3.heading('3', text='TCP/UDP эвристика')
         self.p2p_table_4.heading('4', text='По полезной нагрузке')
+        self.p2p_table_5.heading('5', text='По метрикам BT')
+        self.p2p_table_6.heading('6', text='Пересечение методов')
 
         self.p2p_table_1.column('1', minwidth=0, width=175)
         self.p2p_table_2.column('2', minwidth=0, width=175)
         self.p2p_table_3.column('3', minwidth=0, width=175)
         self.p2p_table_4.column('4', minwidth=0, width=175)
+        self.p2p_table_5.column('5', minwidth=0, width=175)
+        self.p2p_table_6.column('6', minwidth=0, width=175)
 
         self.scroll_out = ttk.Scrollbar(self.frame_main, command=self.output.yview)
         self.output.config(yscrollcommand=self.scroll_out.set)
@@ -102,6 +108,8 @@ class Menu(tk.Frame):
         self.p2p_table_2.grid(row=0, column=1, padx=(0, 5), sticky=tk.NE)
         self.p2p_table_3.grid(row=1, column=0, padx=(5, 0), sticky=tk.NE)
         self.p2p_table_4.grid(row=1, column=1, padx=(0, 5), sticky=tk.NE)
+        self.p2p_table_5.grid(row=2, column=0, padx=(5, 0), sticky=tk.NE)
+        self.p2p_table_6.grid(row=2, column=1, padx=(0, 5), sticky=tk.NE)
 
         self.stop_btn.grid(row=1, column=0, pady=(10, 10))
 
@@ -165,14 +173,37 @@ class Menu(tk.Frame):
         for addr in sniffer.bitcoin_addrs:
             self.p2p_table_4.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
 
+        intersection = set()
+        intersection = intersection | (sniffer.p2p_pairs_p
+                                      & (sniffer.p2p_pairs_ipp | sniffer.bittorrent_addrs
+                                         | sniffer.bitcoin_addrs | sniffer.bittorrent_addrs2))
+
+        intersection = intersection | (sniffer.p2p_pairs_ipp
+                                       & (sniffer.p2p_pairs_p  | sniffer.bittorrent_addrs
+                                          | sniffer.bitcoin_addrs | sniffer.bittorrent_addrs2))
+
+        intersection = intersection | ((sniffer.bittorrent_addrs | sniffer.bitcoin_addrs)
+                                        & (sniffer.p2p_pairs_p | sniffer.p2p_pairs_ipp | sniffer.bittorrent_addrs2))
+
+        intersection = intersection | (sniffer.bittorrent_addrs2
+                                       & (sniffer.p2p_pairs_p  | sniffer.bittorrent_addrs
+                                          | sniffer.bitcoin_addrs | sniffer.p2p_pairs_ipp))
+
+        for item_id in self.p2p_table_6.get_children():
+            self.p2p_table_6.delete(item_id)
+        for addr in intersection:
+            self.p2p_table_6.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
+
         root.after(15000, self.call_find_p2p)
 
     def call_bt_stats(self):
         for ipp in sniffer.dict_ipport:
-            c, at, bi, rc = sniffer.dict_ipport[ipp].bt_stats()
-            if c > 0 and at > 0:
-                print(ipp)
-                print('C = {}, AT / C = {}, BI = {}, RC / AT = {}'.format(c, at / c, bi, rc / at))
+            sniffer.dict_ipport[ipp].bt_stats()
+
+        for item_id in self.p2p_table_5.get_children():
+            self.p2p_table_5.delete(item_id)
+        for addr in sniffer.bittorrent_addrs2:
+            self.p2p_table_5.insert(parent='', index='end', values=[addr[0] + ":" + str(addr[1])])
 
         root.after(30000, self.call_bt_stats)
 
@@ -196,6 +227,16 @@ class Menu(tk.Frame):
         file2.write('По полезной нагрузке: \n')
         for row in self.p2p_table_4.get_children():
             addr = self.p2p_table_4.item(row)['values'][0]
+            file2.write(' * ' + addr + '\n')
+
+        file2.write('По метрикам Bittorrent: \n')
+        for row in self.p2p_table_5.get_children():
+            addr = self.p2p_table_5.item(row)['values'][0]
+            file2.write(' * ' + addr + '\n')
+
+        file2.write('Пересечение методов: \n')
+        for row in self.p2p_table_6.get_children():
+            addr = self.p2p_table_6.item(row)['values'][0]
             file2.write(' * ' + addr + '\n')
 
         file2.write('Конец списка. \n')

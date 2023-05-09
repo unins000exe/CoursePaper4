@@ -34,6 +34,11 @@ EXCEPTIONS = {137, 138, 139, 445, 53, 123, 500, 554, 1900, 7070,
               6970, 1755, 5000, 5001, 6112, 6868, 6899, 6667, 7000, 7514,
               20, 21, 3396, 66, 1521, 1526, 1524, 22, 23, 25, 513, 543}
 
+C_threshold = 20
+RAT_threshold = 0.35
+BIAT_threshold = 5
+RRC_threshold = 0.5
+
 TCP_addrs = set()
 UDP_addrs = set()
 p2p_addrs_tu = set()  # адреса, взаимодействующие одновременно по TCP и UDP
@@ -43,6 +48,7 @@ rejected = set()  # адреса, не относящиеся к P2P (исклю
 dict_ipport = dict()  # словарь вида (ip+port -> объект класса IPPort)
 
 bittorrent_addrs = set()  # адреса, относящиеся к BitTorrent
+bittorrent_addrs2 = set()  # адреса, относящиеся к BitTorrent, обнаруженные по метрикам
 bitcoin_addrs = set()  # адреса, относящиеся к Bitcoin
 bitcoin_phrases = ['version', 'verack', 'addr', 'inv', 'getdata', 'notfound', 'getblocks',
                    'getheaders', 'tx', 'block', 'headers', 'getaddr', 'mempool', 'checkorder',
@@ -78,11 +84,10 @@ class IPPort:
     def add_out_addrs(self, dest_addr):
         self.dest_addrs.add(dest_addr)
 
-    # Добавление в p2p_addrs1 адресов, которые взаимодействовали с адресами из p2p_addrs_tu
+    # Добавление адресов, которые взаимодействовали с адресами из p2p_addrs_tu
     def add_to_p2p_addrs1(self):
         for ip in self.IPSet:
             if ip not in [ipport[0] for ipport in rejected]:
-                # добавляю в p2p_addrs_tu, чтобы относилось к одной эвристике, хотя по сути это p2p_addrs1
                 p2p_addrs_tu.add('(*) ' + ip)
 
     def bt_stats(self):
@@ -115,8 +120,22 @@ class IPPort:
             self.rc += len(self.old_bi - bi)
 
         self.old_bi = bi
-
-        return c, at, len(bi), self.rc
+        # Проверка граничных значений
+        if c > C_threshold:
+            bittorrent_addrs.add((self.dst_ip, self.dst_port))
+            bittorrent_addrs2.add((self.dst_ip, self.dst_port))
+        elif len(bi) > BIAT_threshold:
+            bittorrent_addrs.add((self.dst_ip, self.dst_port))
+            bittorrent_addrs2.add((self.dst_ip, self.dst_port))
+        # Следующие метрики связываются с метрикой C для большей точности
+        elif c > C_threshold / 2:
+            if at / c > RAT_threshold:
+                bittorrent_addrs.add((self.dst_ip, self.dst_port))
+                bittorrent_addrs2.add((self.dst_ip, self.dst_port))
+            elif at > 0:
+                if self.rc / at > RRC_threshold:
+                    bittorrent_addrs.add((self.dst_ip, self.dst_port))
+                    bittorrent_addrs2.add((self.dst_ip, self.dst_port))
 
 
 def sniff(conn, os):
@@ -242,8 +261,8 @@ def find_p2p():
         port = ipp.dst_port
 
         # Добавление адресов, взаимодействующие с адресами из TCP/UDP пар
-        if ip in p2p_addrs_tu:
-            ipp.add_to_p2p_addrs1()
+        # if ip in p2p_addrs_tu:
+        #     ipp.add_to_p2p_addrs1()
 
         compare_dif = 2
 
