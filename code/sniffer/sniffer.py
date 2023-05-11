@@ -63,17 +63,16 @@ class IPPort:
         self.dst_port = dst_port
         self.IPSet = set()  # IP-адреса источников
         self.PortSet = set()  # Порты источников
-        self.srcs = set()
+        self.srcs_addrs = set()
         self.in_packets = dict()
         self.dest_addrs = set()
         self.old_bi = set()
         self.rc = 0
-        self.p2p = False  # НЕ ИСПОЛЬЗУЕТСЯ
 
     def add_sources(self, ip, port):
         self.IPSet.add(ip)
         self.PortSet.add(port)
-        self.srcs.add((ip, port))
+        self.srcs_addrs.add((ip, port))
 
     def add_packets(self, src_addr, size):
         if src_addr in self.in_packets.keys():
@@ -92,8 +91,8 @@ class IPPort:
 
     def bt_stats(self):
         # 1
-        c = len(self.srcs)
-        self.srcs = set()
+        c = len(self.srcs_addrs)
+        self.srcs_addrs = set()
 
         # 2
         at = 0
@@ -105,8 +104,7 @@ class IPPort:
                 for p in packets:
                     average_size += p
                 average_size /= pack_size
-                # 1250 или больше поставить?
-                if average_size > 1250:
+                if average_size > 1375:
                     at += 1
 
         # 3
@@ -121,21 +119,22 @@ class IPPort:
 
         self.old_bi = bi
         # Проверка граничных значений
-        if c > C_threshold:
-            bittorrent_addrs.add((self.dst_ip, self.dst_port))
-            bittorrent_addrs2.add((self.dst_ip, self.dst_port))
-        elif len(bi) > BIAT_threshold:
-            bittorrent_addrs.add((self.dst_ip, self.dst_port))
-            bittorrent_addrs2.add((self.dst_ip, self.dst_port))
-        # Следующие метрики связываются с метрикой C для большей точности
-        elif c > C_threshold / 2:
-            if at / c > RAT_threshold:
-                bittorrent_addrs.add((self.dst_ip, self.dst_port))
+        if (self.dst_ip, self.dst_port) not in rejected:
+            if c >= C_threshold:
+                print('C', c, self.dst_ip, self.dst_port)
                 bittorrent_addrs2.add((self.dst_ip, self.dst_port))
-            elif at > 0:
-                if self.rc / at > RRC_threshold:
-                    bittorrent_addrs.add((self.dst_ip, self.dst_port))
+            elif len(bi) >= BIAT_threshold:
+                print('bi', len(bi), self.dst_ip, self.dst_port)
+                bittorrent_addrs2.add((self.dst_ip, self.dst_port))
+            # Следующие метрики связываются с метрикой C для большей точности
+            elif c >= C_threshold / 2:
+                if at / c >= RAT_threshold:
+                    print('at / c', at / c, self.dst_ip, self.dst_port)
                     bittorrent_addrs2.add((self.dst_ip, self.dst_port))
+                elif at > 0:
+                    if self.rc / at >= RRC_threshold:
+                        print('rc / at', self.rc / at, self.dst_ip, self.dst_port)
+                        bittorrent_addrs2.add((self.dst_ip, self.dst_port))
 
 
 def sniff(conn, os):
@@ -193,9 +192,9 @@ def add_info(src, dest, src_port, dest_port):
     elif LIST_P2P.get(dest_port, False):
         p2p_pairs_p.add((dest, dest_port))
         addition_info = 'P2P ' + LIST_P2P[dest_port]
-    elif (src, src_port) in bittorrent_addrs:
+    elif (src, src_port) in bittorrent_addrs | bittorrent_addrs2:
         addition_info = 'P2P BitTorrent'
-    elif (dest, dest_port) in bittorrent_addrs:
+    elif (dest, dest_port) in bittorrent_addrs | bittorrent_addrs2:
         addition_info = 'P2P BitTorrent'
     elif (src, src_port) in bitcoin_addrs:
         addition_info = 'P2P Bitcoin'
@@ -231,19 +230,18 @@ def check_exceptions(src, dest, src_port, dest_port):
 
 # Анализ полезной нагрузки пакетов,
 def payload_analysis(src, dest, src_port, dest_port, data):
-    # Для BitTorrent
-    sdata = str(data)
-    if len(data) >= 20:
-        if 'BitTorrent protocol' in sdata:
-            bittorrent_addrs.add((src, src_port))
-            bittorrent_addrs.add((dest, dest_port))
-        elif src_port == 8333 or dest_port == 8333 or src_port == 8334 or dest_port == 8334:
-            # print(sdata)
-            for word in bitcoin_phrases:
-                if word in sdata:
-                    bitcoin_addrs.add((src, src_port))
-                    bitcoin_addrs.add((dest, dest_port))
-                    break
+    if (src, src_port) not in rejected and (dest, dest_port) not in rejected:
+        sdata = str(data)
+        if len(data) >= 20:
+            if 'BitTorrent protocol' in sdata:
+                bittorrent_addrs.add((src, src_port))
+                bittorrent_addrs.add((dest, dest_port))
+            elif src_port == 8333 or dest_port == 8333 or src_port == 8334 or dest_port == 8334:
+                for word in bitcoin_phrases:
+                    if word in sdata:
+                        bitcoin_addrs.add((src, src_port))
+                        bitcoin_addrs.add((dest, dest_port))
+                        break
 
 
 def find_p2p():
