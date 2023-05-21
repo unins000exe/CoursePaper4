@@ -283,7 +283,7 @@ FUNCTION {field.or.null}
 FUNCTION {emphasize}
 { duplicate$ empty$
     { pop$ "" }
-    { "\emph{" swap$ * "}" * }
+    { "{" swap$ * "}" * }
   if$
 }
 
@@ -1380,7 +1380,7 @@ FUNCTION {begin.bib}
   "\expandafter\ifx\csname date#1\endcsname\relax"                  write$ newline$
   "\else\language\csname l@#1\endcsname\fi}"                        write$ newline$
   "\ifx\undefined\url\def\url#1{{\small #1}}\else\fi"               write$ newline$
-  "\ifx\undefined\BibAuthor\def\BibAuthor#1{\emph{#1}}\else\fi"     write$ newline$
+  "\ifx\undefined\BibAuthor\def\BibAuthor#1{#1}\else\fi"     write$ newline$
   "\ifx\undefined\BibTitle\def\BibTitle#1{#1}\else\fi"              write$ newline$
   "\ifx\undefined\BibUrl\def\BibUrl#1{\url{#1}}\else\fi"            write$ newline$
   "\ifx\undefined\BibAnnote\def\BibAnnote#1{}\else\fi"              write$ newline$
